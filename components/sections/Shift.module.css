@@ -1,0 +1,174 @@
+.section {
+  position: relative;
+  background: var(--navy-950);
+  color: #fff;
+  overflow: hidden;
+}
+.glow {
+  position: absolute;
+  left: 50%;
+  top: 52%;
+  width: 760px;
+  height: 460px;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(ellipse, rgba(43, 72, 255, 0.28), transparent 68%);
+  pointer-events: none;
+}
+
+.head { position: relative; max-width: 760px; }
+.title { margin-top: 20px; color: #fff; }
+.title em {
+  font-family: var(--font-editorial);
+  font-style: italic;
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  color: var(--pitch);
+}
+.sub { margin-top: 22px; max-width: 48ch; }
+
+/* ---------- diagram ---------- */
+.diagram {
+  position: relative;
+  margin-top: clamp(48px, 6vw, 84px);
+  display: none;
+  aspect-ratio: 1000 / 380;
+}
+.svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.path {
+  fill: none;
+  stroke-width: 1.25;
+  stroke-linecap: round;
+  stroke-dasharray: 1000;
+  stroke-dashoffset: 1000;
+  transition: stroke-dashoffset 1.6s var(--ease);
+}
+.isIn .path { stroke-dashoffset: 0; }
+
+.node {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  display: grid;
+  place-items: center;
+  gap: 10px;
+  z-index: 3;
+}
+.nodeTile {
+  width: 78px;
+  height: 78px;
+  border-radius: 24px;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(150deg, #16295e, #2b48ff);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.14), 0 0 60px rgba(43, 72, 255, 0.55),
+    0 24px 60px -20px rgba(0, 0, 0, 0.8);
+}
+.nodeLabel {
+  font-size: var(--fs-micro);
+  letter-spacing: 0.16em;
+  font-weight: 620;
+  color: rgba(255, 255, 255, 0.55);
+  white-space: nowrap;
+}
+
+.chip {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 14px;
+  border-radius: 11px;
+  font-size: var(--fs-xs);
+  font-weight: 520;
+  letter-spacing: -0.012em;
+  white-space: nowrap;
+  transform: translateY(-50%);
+  opacity: 0;
+  transition: opacity 0.8s var(--ease), transform 0.8s var(--ease);
+  transition-delay: var(--d, 0ms);
+}
+.isIn .chip { opacity: 1; }
+
+.chipIn {
+  left: 0;
+  width: 21%;
+  background: rgba(255, 255, 255, 0.045);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.55);
+  transform: translate(-14px, -50%);
+}
+.isIn .chipIn { transform: translate(0, -50%); }
+
+.chipOut {
+  right: 0;
+  width: 19%;
+  justify-content: flex-start;
+  background: rgba(255, 255, 255, 0.96);
+  color: var(--ink);
+  font-weight: 560;
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  box-shadow: 0 14px 30px -14px rgba(0, 0, 0, 0.7);
+  transform: translate(14px, -50%);
+}
+.isIn .chipOut { transform: translate(0, -50%); }
+.chipOut i { width: 6px; height: 6px; border-radius: 50%; background: var(--electric); flex: none; }
+
+/* ---------- stacked fallback ---------- */
+.stack { margin-top: 44px; display: grid; gap: 22px; }
+.stackGroup { display: flex; flex-wrap: wrap; gap: 8px; }
+.stackLabel {
+  font-size: var(--fs-micro);
+  letter-spacing: 0.14em;
+  font-weight: 620;
+  color: rgba(255, 255, 255, 0.35);
+  margin-bottom: 10px;
+}
+.stackChip {
+  display: inline-flex;
+  align-items: center;
+  height: 34px;
+  padding-inline: 12px;
+  border-radius: 10px;
+  font-size: var(--fs-xs);
+  background: rgba(255, 255, 255, 0.045);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.55);
+}
+.stackChipOut {
+  background: #fff;
+  color: var(--ink);
+  border-color: #fff;
+  font-weight: 560;
+}
+.stackArrow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: rgba(255, 255, 255, 0.3);
+}
+.stackArrow::before,
+.stackArrow::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.12);
+}
+.stackNode {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px 10px 12px;
+  border-radius: 14px;
+  background: linear-gradient(140deg, #16295e, #2b48ff);
+  box-shadow: 0 0 40px rgba(43, 72, 255, 0.4);
+  font-size: var(--fs-sm);
+  font-weight: 580;
+  color: #fff;
+}
+
+@media (min-width: 940px) {
+  .diagram { display: block; }
+  .stack { display: none; }
+}
