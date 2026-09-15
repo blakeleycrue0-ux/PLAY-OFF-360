@@ -18,16 +18,34 @@ const CONFIRMED = [
 ];
 
 const FEED = [
-  { who: "Marta Soler", text: "confirmó a **Marc Vidal** para el sábado", time: "hace 4 min" },
-  { who: "Chema Ruiz", text: "adjuntó el **acta de la jornada 20**", time: "hace 26 min" },
-  { who: "Rosa Amengual", text: "marcó **no disponible** — examen el sábado", time: "hace 1 h" },
-  { who: "Dani Moreno", text: "movió el entrenamiento del jueves a **18:00**", time: "ayer, 21:04" },
+  {
+    who: "Marta Soler",
+    text: "confirmó a **Marc Vidal** para el sábado",
+    time: "hace 4 min",
+  },
+  {
+    who: "Chema Ruiz",
+    text: "adjuntó el **acta de la jornada 20**",
+    time: "hace 26 min",
+  },
+  {
+    who: "Rosa Amengual",
+    text: "marcó **no disponible** — examen el sábado",
+    time: "hace 1 h",
+  },
+  {
+    who: "Dani Moreno",
+    text: "movió el entrenamiento del jueves a **18:00**",
+    time: "ayer, 21:04",
+  },
 ];
 
 function rich(text: string) {
-  return text.split("**").map((part, i) =>
-    i % 2 === 1 ? <b key={i}>{part}</b> : <span key={i}>{part}</span>,
-  );
+  return text
+    .split("**")
+    .map((part, i) =>
+      i % 2 === 1 ? <b key={i}>{part}</b> : <span key={i}>{part}</span>,
+    );
 }
 
 export default function TodayScreen() {
@@ -95,7 +113,9 @@ export default function TodayScreen() {
           <div className={s.cardSub}>
             {MATCH.home} · {MATCH.day.toLowerCase()} {MATCH.time}
           </div>
-          <button className={`${s.miniBtn} ${s.miniBtnGhost}`}>Preparar convocatoria</button>
+          <button className={`${s.miniBtn} ${s.miniBtnGhost}`}>
+            Preparar convocatoria
+          </button>
         </div>
       </div>
 

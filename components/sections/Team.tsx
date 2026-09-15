@@ -24,7 +24,7 @@ const TUTORS: Record<string, string> = {
 
 const ROWS = SQUAD.slice(0, 9);
 
-const STREAK = [100, 100, 86, 100, 92, 100];
+const STREAK = [100, 89, 78, 100, 94, 100];
 
 export default function Team() {
   const { ref, inView } = useInView<HTMLDivElement>({ amount: 0.12 });
@@ -68,16 +68,19 @@ export default function Team() {
                 <div className={s.tableWrap}>
                   <div className={s.thead}>
                     <span>Jugador</span>
-                    <span>Dorsal</span>
-                    <span>Tutor</span>
-                    <span>Ficha</span>
+                    <span className={s.cDorsal}>Dorsal</span>
+                    <span className={s.cTutor}>Responsable</span>
+                    <span>Pos.</span>
                     <span>Sábado</span>
                   </div>
 
                   {ROWS.map((p, i) => (
                     <div
                       key={p.name}
-                      className={[s.trow, p.name === "Pau Server" ? s.trowActive : ""].join(" ")}
+                      className={[
+                        s.trow,
+                        p.name === "Pau Server" ? s.trowActive : "",
+                      ].join(" ")}
                       style={{ ["--d" as string]: `${120 + i * 60}ms` }}
                     >
                       <span className={s.player}>
@@ -87,8 +90,10 @@ export default function Team() {
                           {p.note && <span className={s.playerTag}>{p.note}</span>}
                         </span>
                       </span>
-                      <span className={s.dorsal}>{p.num}</span>
-                      <span className={s.tutor}>{TUTORS[p.name] ?? "—"}</span>
+                      <span className={`${s.dorsal} ${s.cDorsal}`}>{p.num}</span>
+                      <span className={`${s.tutor} ${s.cTutor}`}>
+                        {TUTORS[p.name] ?? "—"}
+                      </span>
                       <span>
                         <span className={s.pos}>{p.pos}</span>
                       </span>
@@ -142,25 +147,32 @@ export default function Team() {
                       </div>
                       <div className={s.docRow}>
                         <IconDoc size={13} /> Reconocimiento médico
-                        <span className={`${s.docState} chip chip-wait`}>Caduca en 22 días</span>
+                        <span className={`${s.docState} chip chip-wait`}>
+                          Caduca en 22 días
+                        </span>
                       </div>
                     </div>
                   </div>
 
                   <div className={s.block}>
                     <span className={s.blockTitle}>Asistencia · últimas 6</span>
-                    <div className={s.streak} style={{ height: 46 }}>
+                    <div className={s.streak}>
                       {STREAK.map((v, i) => (
-                        <span
-                          key={i}
-                          className={s.streakBar}
-                          style={{
-                            height: inView ? `${Math.max(14, v * 0.46)}px` : "4px",
-                            background: v === 100 ? "var(--ok)" : "rgba(16,169,122,0.35)",
-                            transition: `height .8s var(--ease) ${400 + i * 70}ms`,
-                          }}
-                        />
+                        <span key={i} className={s.streakTrack}>
+                          <i
+                            className={s.streakBar}
+                            style={{
+                              height: inView ? `${v}%` : "0%",
+                              opacity: v >= 95 ? 1 : v >= 85 ? 0.7 : 0.45,
+                              transitionDelay: `${360 + i * 70}ms`,
+                            }}
+                          />
+                        </span>
                       ))}
+                    </div>
+                    <div className={s.streakLabels}>
+                      <span>hace 6</span>
+                      <span>última</span>
                     </div>
                   </div>
                 </aside>

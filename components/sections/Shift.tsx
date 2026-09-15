@@ -23,7 +23,7 @@ export default function Shift() {
   const { ref, inView } = useInView<HTMLDivElement>({ amount: 0.25 });
 
   return (
-    <section className={`section ${s.section}`}>
+    <section className={`section dark ${s.section}`}>
       <div className={s.glow} aria-hidden />
       <div className="field-lines on-dark" aria-hidden />
 
@@ -89,7 +89,10 @@ export default function Shift() {
             <span
               key={label}
               className={`${s.chip} ${s.chipIn}`}
-              style={{ top: `${(IN_Y[i] / 380) * 100}%`, ["--d" as string]: `${i * 80}ms` }}
+              style={{
+                top: `${(IN_Y[i] / 380) * 100}%`,
+                ["--d" as string]: `${i * 80}ms`,
+              }}
             >
               {label}
             </span>

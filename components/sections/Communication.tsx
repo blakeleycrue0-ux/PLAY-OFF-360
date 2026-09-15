@@ -16,11 +16,26 @@ import {
 import s from "./Communication.module.css";
 
 const DELIVERY = [
-  { name: "Marta Soler", role: "Madre de Marc Vidal", state: "Respondido", time: "19:42" },
+  {
+    name: "Marta Soler",
+    role: "Madre de Marc Vidal",
+    state: "Respondido",
+    time: "19:42",
+  },
   { name: "Jaume Server", role: "Padre de Pau Server", state: "Leído", time: "19:44" },
-  { name: "Andreu Nadal", role: "Padre de Hugo Nadal", state: "Respondido", time: "19:51" },
+  {
+    name: "Andreu Nadal",
+    role: "Padre de Hugo Nadal",
+    state: "Respondido",
+    time: "19:51",
+  },
   { name: "Carla Tous", role: "Madre de Nico Tous", state: "Leído", time: "20:03" },
-  { name: "Rosa Amengual", role: "Madre de Lluc Amengual", state: "Entregado", time: "20:10" },
+  {
+    name: "Rosa Amengual",
+    role: "Madre de Lluc Amengual",
+    state: "Entregado",
+    time: "20:10",
+  },
   { name: "Chema Ruiz", role: "Delegado", state: "Respondido", time: "20:12" },
 ];
 
@@ -165,9 +180,7 @@ export default function Communication() {
                     <IconMail size={13} />
                   </span>
                   <span className={stateChip(d.state)}>{d.state}</span>
-                  <span className={`${s.rowTime} num`}>
-                    {d.time}
-                  </span>
+                  <span className={`${s.rowTime} num`}>{d.time}</span>
                 </div>
               ))}
             </div>

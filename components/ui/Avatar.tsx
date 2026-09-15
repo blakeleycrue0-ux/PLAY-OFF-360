@@ -33,7 +33,13 @@ export default function Avatar({
 }) {
   const [a, b] = PALETTES[hash(name) % PALETTES.length];
   const ringColor =
-    ring === "ok" ? "var(--ok)" : ring === "wait" ? "var(--wait)" : ring === "no" ? "var(--no)" : null;
+    ring === "ok"
+      ? "var(--ok)"
+      : ring === "wait"
+        ? "var(--wait)"
+        : ring === "no"
+          ? "var(--no)"
+          : null;
 
   return (
     <span
@@ -67,10 +73,13 @@ export function AvatarStack({
   names,
   size = 28,
   max = 6,
+  /** colour of the separating ring — match it to the surface behind the stack */
+  surface = "var(--paper)",
 }: {
   names: string[];
   size?: number;
   max?: number;
+  surface?: string;
 }) {
   const shown = names.slice(0, max);
   const rest = names.length - shown.length;
@@ -83,7 +92,7 @@ export function AvatarStack({
           style={{
             marginLeft: i === 0 ? 0 : -size * 0.3,
             borderRadius: "50%",
-            boxShadow: "0 0 0 2px var(--paper)",
+            boxShadow: `0 0 0 2px ${surface}`,
             display: "inline-flex",
             zIndex: shown.length - i,
           }}
@@ -106,7 +115,7 @@ export function AvatarStack({
             color: "var(--ink-55)",
             fontSize: Math.max(9, Math.round(size * 0.33)),
             fontWeight: 600,
-            boxShadow: "0 0 0 2px var(--paper)",
+            boxShadow: `0 0 0 2px ${surface}`,
           }}
         >
           +{rest}

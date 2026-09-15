@@ -43,8 +43,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "PLAYOFF30 — El puesto de mando de tu equipo",
-    description:
-      "Convocatorias, asistencia, partidos y comunicación. En un solo sitio.",
+    description: "Convocatorias, asistencia, partidos y comunicación. En un solo sitio.",
   },
 };
 

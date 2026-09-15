@@ -7,7 +7,10 @@
   box-shadow: var(--sh-4);
   isolation: isolate;
 }
-.frameFlat { box-shadow: var(--sh-3); border-color: var(--line); }
+.frameFlat {
+  box-shadow: var(--sh-3);
+  border-color: var(--line);
+}
 
 .top {
   display: flex;
@@ -50,7 +53,10 @@
   letter-spacing: -0.015em;
   white-space: nowrap;
 }
-.clubChev { color: var(--ink-40); margin-left: 1px; }
+.clubChev {
+  color: var(--ink-40);
+  margin-left: 1px;
+}
 
 .tabs {
   display: none;
@@ -103,8 +109,12 @@
   box-shadow: 0 0 0 1.5px #f7f6f4;
 }
 
-.body { background: var(--bone); }
+.body {
+  background: var(--bone);
+}
 
 @media (min-width: 720px) {
-  .tabs { display: flex; }
+  .tabs {
+    display: flex;
+  }
 }

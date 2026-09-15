@@ -45,7 +45,7 @@ export default function Matches() {
   const { ref, inView } = useInView<HTMLDivElement>({ amount: 0.15 });
 
   return (
-    <section id="partidos" className={`section ${s.section}`}>
+    <section id="partidos" className={`section dark ${s.section}`}>
       <div className={s.glow} aria-hidden />
       <div className="field-lines on-dark" aria-hidden />
 
@@ -148,7 +148,7 @@ export default function Matches() {
                         }}
                       />
                     </span>
-                    <span className={s.avLabel}>{a.label.split(" ")[0]}</span>
+                    <span className={s.avLabel}>{a.label}</span>
                   </div>
                 ))}
               </div>
@@ -165,7 +165,7 @@ export default function Matches() {
                     <span className={s.callUpNum}>16</span>
                     <span className={s.callUpText}>convocados de 18 disponibles</span>
                   </div>
-                  <AvatarStack names={CALLED} size={26} max={9} />
+                  <AvatarStack names={CALLED} size={26} max={9} surface="#16224a" />
                   <button className={s.publish}>
                     <IconSend size={13} /> Publicar convocatoria
                   </button>

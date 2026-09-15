@@ -45,7 +45,9 @@ export default function Attendance() {
                 <IconCheck size={20} />
               </span>
               <div>
-                <div className={s.topTitle}>Entrenamiento · {TRAINING.day} {TRAINING.date}</div>
+                <div className={s.topTitle}>
+                  Entrenamiento · {TRAINING.day} {TRAINING.date}
+                </div>
                 <div className={s.topMeta}>{TRAINING.pitch} · Infantil A</div>
               </div>
               <span className={s.topTime}>{TRAINING.time}</span>
@@ -95,7 +97,11 @@ export default function Attendance() {
                   <span className={s.tileName}>{p.name}</span>
                   <i
                     className={`dot ${
-                      p.status === "ok" ? "dot-ok" : p.status === "wait" ? "dot-wait" : "dot-no"
+                      p.status === "ok"
+                        ? "dot-ok"
+                        : p.status === "wait"
+                          ? "dot-wait"
+                          : "dot-no"
                     } ${s.tileState}`}
                   />
                 </div>
@@ -108,13 +114,15 @@ export default function Attendance() {
                 {SESSIONS.map((x, i) => (
                   <div key={x.label} className={s.barCol}>
                     <span className={s.barVal}>{x.v}%</span>
-                    <span
-                      className={s.bar}
-                      style={{
-                        height: inView ? `${x.v * 0.52}px` : 0,
-                        ["--d" as string]: `${300 + i * 90}ms`,
-                      }}
-                    />
+                    <span className={s.barTrack}>
+                      <i
+                        className={s.bar}
+                        style={{
+                          height: inView ? `${x.v}%` : 0,
+                          ["--d" as string]: `${300 + i * 90}ms`,
+                        }}
+                      />
+                    </span>
                     <span className={s.barLabel}>{x.label}</span>
                   </div>
                 ))}

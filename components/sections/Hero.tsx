@@ -6,7 +6,11 @@ import s from "./Hero.module.css";
 
 const RAIL = [
   { n: "01", label: "Convocatorias", text: "Preparadas, enviadas y respondidas." },
-  { n: "02", label: "Asistencia", text: "Entrenamientos y partidos, sin perseguir a nadie." },
+  {
+    n: "02",
+    label: "Asistencia",
+    text: "Entrenamientos y partidos, sin perseguir a nadie.",
+  },
   { n: "03", label: "Partidos", text: "Citación, campo, desplazamiento y acta." },
   { n: "04", label: "Comunicación", text: "Cada aviso llega a quien tiene que llegar." },
 ];
@@ -40,8 +44,8 @@ export default function Hero() {
           <div className={s.introFoot}>
             <Reveal variant="up" delay={300}>
               <p className={`lead ${s.lead}`}>
-                Convocatorias, asistencia, partidos y avisos en un mismo sitio. Le dices
-                a PLAYOFF30 lo que necesitas y lo deja preparado para enviar.
+                Convocatorias, asistencia, partidos y avisos en un mismo sitio. Le dices a
+                PLAYOFF30 lo que necesitas y lo deja preparado para enviar.
               </p>
             </Reveal>
 

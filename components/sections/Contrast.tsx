@@ -21,7 +21,7 @@ const AFTER = [
 
 export default function Contrast() {
   return (
-    <section className={`section ${s.section}`}>
+    <section className={`section dark ${s.section}`}>
       <div className={s.glow} aria-hidden />
       <div className="field-lines on-dark" aria-hidden />
 
@@ -68,7 +68,7 @@ export default function Contrast() {
             </span>
           </div>
 
-          <Reveal variant="left" delay={140} className={s.col}>
+          <Reveal variant="left" delay={140} className={`${s.col} ${s.after}`}>
             <div className={s.colHead}>
               <span className={s.colLabel}>Ahora</span>
               <span className={s.colMeta} style={{ color: "var(--pitch)" }}>

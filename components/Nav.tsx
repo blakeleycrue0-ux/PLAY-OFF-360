@@ -56,7 +56,9 @@ export default function Nav() {
               Entrar
             </a>
             <a href="#probar" className={s.cta}>
-              Probar PLAYOFF30
+              <span>
+                Probar<span className={s.ctaLong}> PLAYOFF30</span>
+              </span>
               <IconArrow size={15} />
             </a>
             <button

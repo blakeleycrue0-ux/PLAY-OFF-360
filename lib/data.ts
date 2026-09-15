@@ -85,10 +85,46 @@ export const TRAINING = {
 };
 
 export const TEAMS = [
-  { name: "Infantil A", players: 18, coach: "Dani Moreno", state: "Convocatoria enviada", tone: "ok" as const },
-  { name: "Cadete B", players: 20, coach: "Rafel Coll", state: "3 sin responder", tone: "wait" as const },
-  { name: "Alevín A", players: 14, coach: "Neus Bauzá", state: "Al día", tone: "ok" as const },
-  { name: "Benjamín C", players: 16, coach: "Chema Ruiz", state: "Falta el acta", tone: "no" as const },
-  { name: "Juvenil A", players: 22, coach: "Sara Vives", state: "Al día", tone: "ok" as const },
-  { name: "Prebenjamín", players: 12, coach: "Tomeu Llull", state: "Al día", tone: "ok" as const },
+  {
+    name: "Infantil A",
+    players: 18,
+    coach: "Dani Moreno",
+    state: "Convocatoria enviada",
+    tone: "ok" as const,
+  },
+  {
+    name: "Cadete B",
+    players: 20,
+    coach: "Rafel Coll",
+    state: "3 sin responder",
+    tone: "wait" as const,
+  },
+  {
+    name: "Alevín A",
+    players: 14,
+    coach: "Neus Bauzá",
+    state: "Al día",
+    tone: "ok" as const,
+  },
+  {
+    name: "Benjamín C",
+    players: 16,
+    coach: "Chema Ruiz",
+    state: "Falta el acta",
+    tone: "no" as const,
+  },
+  {
+    name: "Juvenil A",
+    players: 22,
+    coach: "Sara Vives",
+    state: "Al día",
+    tone: "ok" as const,
+  },
+  {
+    name: "Prebenjamín",
+    players: 12,
+    coach: "Tomeu Llull",
+    state: "Al día",
+    tone: "ok" as const,
+  },
 ];

@@ -8,8 +8,7 @@ import { AvatarStack } from "../ui/Avatar";
 import { IconArrow, IconCheck, IconDoc, IconSend } from "../ui/Icon";
 import s from "./Assistant.module.css";
 
-const ASK_1 =
-  "Pregunta a los padres del Infantil A quién estará disponible el sábado.";
+const ASK_1 = "Pregunta a los padres del Infantil A quién estará disponible el sábado.";
 const ASK_2 = "¿Quién ha confirmado?";
 const ASK_3 = "Recuérdaselo a los que no han contestado.";
 

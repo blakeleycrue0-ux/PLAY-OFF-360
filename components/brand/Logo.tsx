@@ -29,7 +29,14 @@ export function Mark({
       className={className}
     >
       <defs>
-        <linearGradient id={id} x1="2" y1="0" x2="30" y2="32" gradientUnits="userSpaceOnUse">
+        <linearGradient
+          id={id}
+          x1="2"
+          y1="0"
+          x2="30"
+          y2="32"
+          gradientUnits="userSpaceOnUse"
+        >
           <stop stopColor="#16295e" />
           <stop offset="1" stopColor="#2b48ff" />
         </linearGradient>
