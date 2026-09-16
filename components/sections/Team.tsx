@@ -10,15 +10,15 @@ import { IconCheck, IconDoc, IconSearch, IconSquad } from "../ui/Icon";
 import s from "./Team.module.css";
 
 const TUTORS: Record<string, string> = {
-  "Biel Company": "Neus Company",
-  "Marc Vidal": "Marta Soler",
-  "Aitor Ramis": "Xisca Ramis",
-  "Guillem Mas": "Pere Mas",
-  "Nico Tous": "Carla Tous",
-  "Sergi Munar": "Joan Munar",
-  "Pau Server": "Jaume Server",
-  "Hugo Nadal": "Andreu Nadal",
-  "Lluc Amengual": "Rosa Amengual",
+  "Rubén Cabrera": "Pilar Cabrera",
+  "Marcos Vidal": "Marta Soler",
+  "Aitor Nieto": "Cristina Nieto",
+  "Gonzalo Mena": "Pedro Mena",
+  "Nico Duarte": "Carla Duarte",
+  "Sergio Prieto": "Juan Prieto",
+  "Pablo Serrano": "Javier Serrano",
+  "Hugo Peña": "Andrés Peña",
+  "Lucas Arriaga": "Rosa Arriaga",
   "Iker Salas": "Elena Salas",
 };
 
@@ -79,7 +79,7 @@ export default function Team() {
                       key={p.name}
                       className={[
                         s.trow,
-                        p.name === "Pau Server" ? s.trowActive : "",
+                        p.name === "Pablo Serrano" ? s.trowActive : "",
                       ].join(" ")}
                       style={{ ["--d" as string]: `${120 + i * 60}ms` }}
                     >
@@ -108,9 +108,9 @@ export default function Team() {
 
                 <aside className={s.detail}>
                   <div className={s.detailTop}>
-                    <Avatar name="Pau Server" size={42} ring="ok" />
+                    <Avatar name="Pablo Serrano" size={42} ring="ok" />
                     <div>
-                      <div className={s.detailName}>Pau Server</div>
+                      <div className={s.detailName}>Pablo Serrano</div>
                       <div className={s.detailMeta}>Mediocentro · Capitán · 13 años</div>
                     </div>
                     <span className={s.detailNum}>8</span>
@@ -119,13 +119,13 @@ export default function Team() {
                   <div className={s.block}>
                     <span className={s.blockTitle}>Responsables</span>
                     <div className={s.contact}>
-                      <Avatar name="Jaume Server" size={24} />
-                      Jaume Server
+                      <Avatar name="Javier Serrano" size={24} />
+                      Javier Serrano
                       <span className={s.contactRole}>Padre</span>
                     </div>
                     <div className={s.contact}>
-                      <Avatar name="Aina Pons" size={24} />
-                      Aina Pons
+                      <Avatar name="Ana Serrano" size={24} />
+                      Ana Serrano
                       <span className={s.contactRole}>Madre</span>
                     </div>
                   </div>

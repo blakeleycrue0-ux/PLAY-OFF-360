@@ -1,23 +1,45 @@
 import Logo from "./brand/Logo";
+import PreferenciasBoton from "./legal/PreferenciasBoton";
 import s from "./Footer.module.css";
 
 const COLS = [
   {
     title: "Producto",
-    links: ["Asistente", "Comunicación", "Equipo", "Partidos", "Asistencia"],
-    hrefs: ["#asistente", "#comunicacion", "#equipo", "#partidos", "#asistencia"],
+    links: [
+      ["Asistente", "/#asistente"],
+      ["Comunicación", "/#comunicacion"],
+      ["Equipo", "/#equipo"],
+      ["Partidos", "/#partidos"],
+      ["Asistencia", "/#asistencia"],
+    ],
   },
   {
     title: "Para quién",
-    links: ["Entrenadores", "Delegados", "Coordinadores", "Clubes"],
-    hrefs: ["#problema", "#problema", "#club", "#club"],
+    links: [
+      ["Entrenadores", "/#problema"],
+      ["Delegados", "/#problema"],
+      ["Coordinadores", "/#club"],
+      ["Clubes", "/#club"],
+    ],
   },
   {
     title: "PLAYOFF30",
-    links: ["Cómo funciona", "Probar", "Escríbenos"],
-    hrefs: ["#asistente", "#probar", "#probar"],
+    links: [
+      ["Cómo funciona", "/#asistente"],
+      ["Probar", "/#probar"],
+      ["Escríbenos", "/#probar"],
+    ],
   },
-];
+  {
+    title: "Legal",
+    links: [
+      ["Aviso legal", "/legal/aviso-legal/"],
+      ["Privacidad", "/legal/privacidad/"],
+      ["Cookies", "/legal/cookies/"],
+      ["Términos de uso", "/legal/terminos/"],
+    ],
+  },
+] as const;
 
 export default function Footer() {
   return (
@@ -36,21 +58,30 @@ export default function Footer() {
             {COLS.map((c) => (
               <div key={c.title}>
                 <div className={s.colTitle}>{c.title}</div>
-                {c.links.map((l, i) => (
-                  <a key={l} href={c.hrefs[i]} className={s.link}>
-                    {l}
+                {c.links.map(([label, href]) => (
+                  <a key={label + href} href={href} className={s.link}>
+                    {label}
                   </a>
                 ))}
+                {c.title === "Legal" && (
+                  <PreferenciasBoton variante="enlace" className={s.prefs} />
+                )}
               </div>
             ))}
           </div>
         </div>
 
+        <p className={s.disclaimer}>
+          Los clubes, equipos, competiciones, campos, jugadores y familias que aparecen en
+          esta web son ficticios y se usan únicamente para mostrar el producto. Cualquier
+          parecido con entidades o personas reales es casual.
+        </p>
+
         <div className={s.bottom}>
           <span>© {new Date().getFullYear()} PLAYOFF30</span>
-          <span>Hecho en Mallorca para equipos de fútbol.</span>
+          <span>Hecho en España para equipos de fútbol.</span>
           <span className={s.pushRight}>
-            <a href="#top">Volver arriba</a>
+            <a href="/#top">Volver arriba</a>
           </span>
         </div>
       </div>

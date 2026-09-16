@@ -33,7 +33,7 @@ export default function Connected() {
                 <div className={s.sheetTop}>
                   <i className="dot dot-wait" /> Falta por responder
                 </div>
-                <div className={s.sheetMain}>Guillem, Martí y Bruno</div>
+                <div className={s.sheetMain}>Gonzalo, Mateo y Bruno</div>
               </div>
             </div>
             <p className={s.desc}>Decide con la plantilla delante, no de memoria.</p>
@@ -48,7 +48,7 @@ export default function Connected() {
                 <div className={s.sheetTop}>
                   <IconClock size={11} /> Sábado · 11:30
                 </div>
-                <div className={s.sheetMain}>CE Constància — CD Son Ferrer</div>
+                <div className={s.sheetMain}>CF Alcorada — CD Valmorán</div>
                 <div className={s.line}>Citación 10:15 en el club</div>
               </div>
               <div className={s.actions}>
@@ -74,7 +74,7 @@ export default function Connected() {
                 <div className={s.line}>Antes: 18:00 · Campo 2</div>
               </div>
               <div className={s.miniRow}>
-                <Avatar name="Marc Vidal" size={22} /> Marc Vidal
+                <Avatar name="Marcos Vidal" size={22} /> Marcos Vidal
                 <span className="chip chip-ok">Confirmado</span>
               </div>
             </div>

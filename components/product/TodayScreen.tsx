@@ -7,20 +7,20 @@ import { IconArrow, IconChevron, IconClock, IconPin, IconShield } from "../ui/Ic
 import s from "./TodayScreen.module.css";
 
 const CONFIRMED = [
-  "Pau Server",
-  "Hugo Nadal",
-  "Marc Vidal",
+  "Pablo Serrano",
+  "Hugo Peña",
+  "Marcos Vidal",
   "Iker Salas",
-  "Biel Company",
-  "Nico Tous",
-  "Sergi Munar",
-  "Álvaro Ferrer",
+  "Rubén Cabrera",
+  "Nico Duarte",
+  "Sergio Prieto",
+  "Álvaro Herrero",
 ];
 
 const FEED = [
   {
     who: "Marta Soler",
-    text: "confirmó a **Marc Vidal** para el sábado",
+    text: "confirmó a **Marcos Vidal** para el sábado",
     time: "hace 4 min",
   },
   {
@@ -29,7 +29,7 @@ const FEED = [
     time: "hace 26 min",
   },
   {
-    who: "Rosa Amengual",
+    who: "Rosa Arriaga",
     text: "marcó **no disponible** — examen el sábado",
     time: "hace 1 h",
   },
@@ -97,7 +97,7 @@ export default function TodayScreen() {
               <i className="dot dot-wait" /> Sin responder
             </span>
           </div>
-          <div className={s.cardLabel}>Guillem Mas, Martí Riera, Bruno Sastre</div>
+          <div className={s.cardLabel}>Gonzalo Mena, Mateo Rivas, Bruno Salgado</div>
           <div className={s.cardSub}>Se les avisó el lunes a las 19:40.</div>
           <button className={s.miniBtn}>
             Recordar a los 3 <IconArrow size={12} />

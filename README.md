@@ -45,6 +45,36 @@ lib/
   useSequence.ts      secuencias por pasos y máquina de escribir
 ```
 
+## ⚠️ Antes de publicar: datos legales
+
+Las páginas legales están escritas pero **incompletas a propósito**. Faltan los
+datos identificativos del titular, que son obligatorios (art. 10 LSSI-CE y RGPD)
+y no se pueden inventar.
+
+Rellena `lib/legal.ts` una sola vez —razón social, NIF, domicilio y correo— y el
+aviso naranja que aparece en las cuatro páginas desaparece solo. Conviene además
+que un abogado revise los textos antes de publicarlos: son una base sólida, no un
+dictamen.
+
+## Legal y cookies
+
+```
+app/legal/aviso-legal/    titular, uso del sitio, propiedad intelectual
+app/legal/privacidad/     RGPD: datos, bases jurídicas, derechos, menores
+app/legal/cookies/        qué se guarda y cómo cambiarlo
+app/legal/terminos/       condiciones de acceso
+```
+
+El sitio **no instala cookies de analítica, publicidad ni redes sociales**. No hay
+Google Analytics, ni píxeles, ni contenido incrustado de terceros; las tipografías
+se sirven desde el propio dominio. Lo único que se guarda es la decisión del
+usuario en `localStorage`, bajo la clave `playoff30.consent.v1`.
+
+El banner (`components/CookieConsent.tsx`) ofrece aceptar todo, solo las
+necesarias, o configurar por categorías. La preferencia se puede cambiar desde el
+enlace del pie de página. Las categorías de analítica y marketing existen para
+cuando haga falta: hoy no controlan nada, y así se dice en la política.
+
 ## Decisiones
 
 **Un solo club ficticio.** Todas las pantallas usan los mismos nombres, el mismo
@@ -64,6 +94,17 @@ conversación en la sección del asistente. Todo se desactiva con
 **Sin datos inventados de negocio.** No hay clientes, logos, testimonios ni
 métricas de tracción. Las cifras que aparecen pertenecen al equipo ficticio de
 la demo.
+
+**Todo el club es inventado.** CD Valmorán, CF Alcorada, el campo, la competición,
+los jugadores y las familias no existen, y no corresponden a ninguna localidad
+real. Es intencionado: usar el nombre de un club real en material de producto
+invita a problemas de marca y de imagen. El pie de página lo dice de forma
+explícita.
+
+**Exportación estática.** `output: "export"` con `trailingSlash: true`, así que
+cada ruta se publica como `carpeta/index.html` y se sirve desde cualquier CDN sin
+runtime de Next. El `netlify.toml` fija el comando de build y el directorio
+`out/`.
 
 ## Móvil
 

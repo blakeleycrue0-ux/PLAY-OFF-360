@@ -18,21 +18,26 @@ import s from "./Communication.module.css";
 const DELIVERY = [
   {
     name: "Marta Soler",
-    role: "Madre de Marc Vidal",
+    role: "Madre de Marcos Vidal",
     state: "Respondido",
     time: "19:42",
   },
-  { name: "Jaume Server", role: "Padre de Pau Server", state: "Leído", time: "19:44" },
   {
-    name: "Andreu Nadal",
-    role: "Padre de Hugo Nadal",
+    name: "Javier Serrano",
+    role: "Padre de Pablo Serrano",
+    state: "Leído",
+    time: "19:44",
+  },
+  {
+    name: "Andrés Peña",
+    role: "Padre de Hugo Peña",
     state: "Respondido",
     time: "19:51",
   },
-  { name: "Carla Tous", role: "Madre de Nico Tous", state: "Leído", time: "20:03" },
+  { name: "Carla Duarte", role: "Madre de Nico Duarte", state: "Leído", time: "20:03" },
   {
-    name: "Rosa Amengual",
-    role: "Madre de Lluc Amengual",
+    name: "Rosa Arriaga",
+    role: "Madre de Lucas Arriaga",
     state: "Entregado",
     time: "20:10",
   },

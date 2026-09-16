@@ -23,22 +23,22 @@ const WEEK = [
 ];
 
 const CALLED = [
-  "Pau Server",
-  "Hugo Nadal",
-  "Marc Vidal",
+  "Pablo Serrano",
+  "Hugo Peña",
+  "Marcos Vidal",
   "Iker Salas",
-  "Nico Tous",
-  "Sergi Munar",
-  "Biel Company",
-  "Jan Oliver",
-  "Aitor Ramis",
-  "Álvaro Ferrer",
-  "Diego Cabrer",
-  "Toni Bennàsar",
-  "Óscar Palou",
-  "Adrián Pons",
-  "Guillem Mas",
-  "Martí Riera",
+  "Nico Duarte",
+  "Sergio Prieto",
+  "Rubén Cabrera",
+  "Iván Oliva",
+  "Aitor Nieto",
+  "Álvaro Herrero",
+  "Diego Carrión",
+  "Antonio Cuevas",
+  "Óscar Bravo",
+  "Adrián Pozo",
+  "Gonzalo Mena",
+  "Mateo Rivas",
 ];
 
 export default function Matches() {
@@ -176,7 +176,7 @@ export default function Matches() {
             <Reveal variant="left" delay={280} className={s.card}>
               <div className={s.panelHead}>
                 <IconPin size={14} /> Cómo llegar
-                <span className={s.panelMeta}>Inca</span>
+                <span className={s.panelMeta}>Alcorada</span>
               </div>
               <div className={s.panelBody}>
                 <div className={s.avRow} style={{ gridTemplateColumns: "auto 1fr" }}>

@@ -9,6 +9,12 @@ const nextConfig: NextConfig = {
    * con quitar esta línea.
    */
   output: "export",
+  /**
+   * Cada ruta se exporta como carpeta/index.html. Sin esto conviven
+   * `legal/aviso-legal.html` y una carpeta `legal/aviso-legal/` sin índice,
+   * y el servidor estático puede quedarse con la carpeta y devolver 404.
+   */
+  trailingSlash: true,
   images: { unoptimized: true },
 };
 

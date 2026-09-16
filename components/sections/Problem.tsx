@@ -59,15 +59,15 @@ export default function Problem() {
               </div>
               <div className={s.chatBody}>
                 <div className={s.bubble}>
-                  <b className={s.bubbleName}>Toni (padre de Óscar)</b>
+                  <b className={s.bubbleName}>Ramón (padre de Óscar)</b>
                   ¿Al final el sábado a qué hora es?
                 </div>
                 <div className={s.bubble}>
                   <b className={s.bubbleName}>Carla</b>
-                  Yo no puedo llevarlo, ¿alguien va desde Palma?
+                  Yo no puedo llevarlo, ¿alguien va para allá?
                 </div>
                 <div className={`${s.bubble} ${s.bubbleMe}`}>
-                  Lo pongo otra vez: 11:30 en Inca 🙏
+                  Lo pongo otra vez: 11:30 en Alcorada 🙏
                 </div>
                 <div className={s.bubble}>
                   <b className={s.bubbleName}>Rosa</b>
@@ -94,22 +94,22 @@ export default function Problem() {
                 <span className={s.gridHead}>12 mar</span>
                 <span className={s.gridHead}>14 mar</span>
 
-                <span>Marc Vidal</span>
+                <span>Marcos Vidal</span>
                 <span className={s.gridOk}>✓</span>
                 <span className={s.gridOk}>✓</span>
                 <span className={s.gridQ}>?</span>
 
-                <span>Lluc Amengual</span>
+                <span>Lucas Arriaga</span>
                 <span className={s.gridOk}>✓</span>
                 <span className={s.gridNo}>✗</span>
                 <span className={s.gridQ}>?</span>
 
-                <span>Bruno Sastre</span>
+                <span>Bruno Salgado</span>
                 <span className={s.gridQ}>?</span>
                 <span className={s.gridQ}>?</span>
                 <span className={s.gridQ}>?</span>
 
-                <span>Guillem Mas</span>
+                <span>Gonzalo Mena</span>
                 <span className={s.gridOk}>✓</span>
                 <span className={s.gridQ}>?</span>
                 <span className={s.gridQ}>?</span>
@@ -142,7 +142,7 @@ export default function Problem() {
               <p className={s.noteText}>
                 llamar madre de Bruno
                 <br />
-                falta ficha de Martí
+                falta ficha de Mateo
                 <br />
                 ¿quién lleva el agua?
               </p>
