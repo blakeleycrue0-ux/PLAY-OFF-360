@@ -18,7 +18,7 @@ const instrument = Instrument_Serif({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://playoff30.com"),
+  metadataBase: new URL("https://playoff360.netlify.app"),
   title: {
     default: "PLAYOFF30 — El puesto de mando de tu equipo",
     template: "%s · PLAYOFF30",

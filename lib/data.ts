@@ -5,8 +5,8 @@
  */
 
 export const CLUB = {
-  name: "CD Son Ferrer",
-  short: "SFE",
+  name: "CD Valmorán",
+  short: "VAL",
   teamName: "Infantil A",
   season: "2025/26",
   coach: "Dani Moreno",
@@ -22,51 +22,51 @@ export type Player = {
 };
 
 export const SQUAD: Player[] = [
-  { name: "Biel Company", pos: "PT", num: 1, status: "ok" },
-  { name: "Marc Vidal", pos: "DF", num: 2, status: "ok" },
-  { name: "Aitor Ramis", pos: "DF", num: 3, status: "ok" },
-  { name: "Guillem Mas", pos: "DF", num: 4, status: "wait" },
-  { name: "Nico Tous", pos: "DF", num: 5, status: "ok" },
-  { name: "Sergi Munar", pos: "MC", num: 6, status: "ok" },
-  { name: "Pau Server", pos: "MC", num: 8, status: "ok", note: "Capitán" },
-  { name: "Hugo Nadal", pos: "MC", num: 10, status: "ok" },
-  { name: "Lluc Amengual", pos: "MC", num: 11, status: "no", note: "Examen" },
+  { name: "Rubén Cabrera", pos: "PT", num: 1, status: "ok" },
+  { name: "Marcos Vidal", pos: "DF", num: 2, status: "ok" },
+  { name: "Aitor Nieto", pos: "DF", num: 3, status: "ok" },
+  { name: "Gonzalo Mena", pos: "DF", num: 4, status: "wait" },
+  { name: "Nico Duarte", pos: "DF", num: 5, status: "ok" },
+  { name: "Sergio Prieto", pos: "MC", num: 6, status: "ok" },
+  { name: "Pablo Serrano", pos: "MC", num: 8, status: "ok", note: "Capitán" },
+  { name: "Hugo Peña", pos: "MC", num: 10, status: "ok" },
+  { name: "Lucas Arriaga", pos: "MC", num: 11, status: "no", note: "Examen" },
   { name: "Iker Salas", pos: "DL", num: 7, status: "ok" },
-  { name: "Álvaro Ferrer", pos: "DL", num: 9, status: "ok" },
-  { name: "Martí Riera", pos: "DL", num: 14, status: "wait" },
-  { name: "Jan Oliver", pos: "DF", num: 15, status: "ok" },
-  { name: "Toni Bennàsar", pos: "MC", num: 16, status: "ok" },
-  { name: "Adrián Pons", pos: "PT", num: 13, status: "ok" },
-  { name: "Diego Cabrer", pos: "DF", num: 17, status: "ok" },
-  { name: "Óscar Palou", pos: "MC", num: 18, status: "ok" },
-  { name: "Bruno Sastre", pos: "DL", num: 19, status: "wait" },
+  { name: "Álvaro Herrero", pos: "DL", num: 9, status: "ok" },
+  { name: "Mateo Rivas", pos: "DL", num: 14, status: "wait" },
+  { name: "Iván Oliva", pos: "DF", num: 15, status: "ok" },
+  { name: "Antonio Cuevas", pos: "MC", num: 16, status: "ok" },
+  { name: "Adrián Pozo", pos: "PT", num: 13, status: "ok" },
+  { name: "Diego Carrión", pos: "DF", num: 17, status: "ok" },
+  { name: "Óscar Bravo", pos: "MC", num: 18, status: "ok" },
+  { name: "Bruno Salgado", pos: "DL", num: 19, status: "wait" },
 ];
 
 export const SQUAD_NAMES = SQUAD.map((p) => p.name);
 
 export const STAFF = [
   { name: "Dani Moreno", role: "Entrenador", meta: "Infantil A" },
-  { name: "Rafel Coll", role: "Segundo entrenador", meta: "Infantil A" },
+  { name: "Rafa Gallego", role: "Segundo entrenador", meta: "Infantil A" },
   { name: "Chema Ruiz", role: "Delegado", meta: "Actas y campo" },
-  { name: "Neus Bauzá", role: "Coordinadora", meta: "Fútbol base" },
+  { name: "Nuria Vega", role: "Coordinadora", meta: "Fútbol base" },
 ];
 
 export const FAMILIES = [
-  { name: "Marta Soler", role: "Madre de Marc Vidal", status: "ok" as const },
-  { name: "Jaume Server", role: "Padre de Pau Server", status: "ok" as const },
-  { name: "Carla Tous", role: "Madre de Nico Tous", status: "wait" as const },
-  { name: "Andreu Nadal", role: "Padre de Hugo Nadal", status: "ok" as const },
-  { name: "Rosa Amengual", role: "Madre de Lluc Amengual", status: "no" as const },
+  { name: "Marta Soler", role: "Madre de Marcos Vidal", status: "ok" as const },
+  { name: "Javier Serrano", role: "Padre de Pablo Serrano", status: "ok" as const },
+  { name: "Carla Duarte", role: "Madre de Nico Duarte", status: "wait" as const },
+  { name: "Andrés Peña", role: "Padre de Hugo Peña", status: "ok" as const },
+  { name: "Rosa Arriaga", role: "Madre de Lucas Arriaga", status: "no" as const },
 ];
 
 export const MATCH = {
   day: "Sábado",
   date: "14 de marzo",
   time: "11:30",
-  home: "CE Constància",
-  away: "CD Son Ferrer",
-  venue: "Camp Municipal des Cos",
-  city: "Inca",
+  home: "CF Alcorada",
+  away: "CD Valmorán",
+  venue: "Campo Municipal de Alcorada",
+  city: "Alcorada",
   competition: "Liga Infantil · Jornada 21",
   meeting: "10:15 en el club",
   travel: "38 min en coche",
@@ -95,14 +95,14 @@ export const TEAMS = [
   {
     name: "Cadete B",
     players: 20,
-    coach: "Rafel Coll",
+    coach: "Rafa Gallego",
     state: "3 sin responder",
     tone: "wait" as const,
   },
   {
     name: "Alevín A",
     players: 14,
-    coach: "Neus Bauzá",
+    coach: "Nuria Vega",
     state: "Al día",
     tone: "ok" as const,
   },
@@ -116,14 +116,14 @@ export const TEAMS = [
   {
     name: "Juvenil A",
     players: 22,
-    coach: "Sara Vives",
+    coach: "Sara Bermejo",
     state: "Al día",
     tone: "ok" as const,
   },
   {
     name: "Prebenjamín",
     players: 12,
-    coach: "Tomeu Llull",
+    coach: "Tomás Gil",
     state: "Al día",
     tone: "ok" as const,
   },

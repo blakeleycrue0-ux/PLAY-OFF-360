@@ -1,5 +1,6 @@
 import Nav from "@/components/Nav";
 import Footer from "@/components/Footer";
+import CookieConsent from "@/components/CookieConsent";
 import Hero from "@/components/sections/Hero";
 import Problem from "@/components/sections/Problem";
 import Shift from "@/components/sections/Shift";
@@ -32,6 +33,7 @@ export default function Page() {
         <FinalCTA />
       </main>
       <Footer />
+      <CookieConsent />
     </>
   );
 }

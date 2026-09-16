@@ -130,14 +130,12 @@ export default function Assistant() {
                       <div className={s.draftBody}>
                         <div className={s.draftLine}>
                           <span className={s.draftKey}>Partido</span>
-                          <span className={s.draftVal}>
-                            CE Constància — CD Son Ferrer
-                          </span>
+                          <span className={s.draftVal}>CF Alcorada — CD Valmorán</span>
                         </div>
                         <div className={s.draftLine}>
                           <span className={s.draftKey}>Cuándo</span>
                           <span className={`${s.draftVal} num`}>
-                            Sábado 14 de marzo · 11:30 · Inca
+                            Sábado 14 de marzo · 11:30 · Alcorada
                           </span>
                         </div>
                         <div className={s.draftLine}>
@@ -147,9 +145,9 @@ export default function Assistant() {
                           </span>
                         </div>
                         <div className={s.draftMsg}>
-                          «Hola. El sábado jugamos fuera, en el Camp Municipal des Cos
-                          (Inca), a las 11:30. Salimos del club a las 10:15. Responde aquí
-                          si tu hijo puede venir — con un toque vale.»
+                          «Hola. El sábado jugamos fuera, en el Campo Municipal de
+                          Alcorada (Alcorada), a las 11:30. Salimos del club a las 10:15.
+                          Responde aquí si tu hijo puede venir — con un toque vale.»
                         </div>
                       </div>
                       <div className={s.draftActions}>
@@ -231,20 +229,20 @@ export default function Assistant() {
                       <div className={s.resultsFoot}>
                         <AvatarStack
                           names={[
-                            "Pau Server",
-                            "Hugo Nadal",
-                            "Marc Vidal",
+                            "Pablo Serrano",
+                            "Hugo Peña",
+                            "Marcos Vidal",
                             "Iker Salas",
-                            "Nico Tous",
-                            "Sergi Munar",
-                            "Biel Company",
-                            "Jan Oliver",
+                            "Nico Duarte",
+                            "Sergio Prieto",
+                            "Rubén Cabrera",
+                            "Iván Oliva",
                           ]}
                           size={20}
                           max={5}
                         />
                         <span>
-                          Sin respuesta: Guillem Mas, Martí Riera y Bruno Sastre.
+                          Sin respuesta: Gonzalo Mena, Mateo Rivas y Bruno Salgado.
                         </span>
                       </div>
                     </div>
@@ -268,13 +266,13 @@ export default function Assistant() {
                     </p>
                     <div className={s.confirmRow}>
                       <span className="chip chip-ok">
-                        <IconCheck size={11} /> Guillem Mas
+                        <IconCheck size={11} /> Gonzalo Mena
                       </span>
                       <span className="chip chip-ok">
-                        <IconCheck size={11} /> Martí Riera
+                        <IconCheck size={11} /> Mateo Rivas
                       </span>
                       <span className="chip chip-ok">
-                        <IconCheck size={11} /> Bruno Sastre
+                        <IconCheck size={11} /> Bruno Salgado
                       </span>
                     </div>
                   </div>

@@ -6,11 +6,11 @@ import { IconArrow } from "./ui/Icon";
 import s from "./Nav.module.css";
 
 const LINKS = [
-  { href: "#asistente", label: "Asistente", index: "01" },
-  { href: "#comunicacion", label: "Comunicación", index: "02" },
-  { href: "#equipo", label: "Equipo", index: "03" },
-  { href: "#partidos", label: "Partidos", index: "04" },
-  { href: "#club", label: "Club", index: "05" },
+  { href: "/#asistente", label: "Asistente", index: "01" },
+  { href: "/#comunicacion", label: "Comunicación", index: "02" },
+  { href: "/#equipo", label: "Equipo", index: "03" },
+  { href: "/#partidos", label: "Partidos", index: "04" },
+  { href: "/#club", label: "Club", index: "05" },
 ];
 
 export default function Nav() {
@@ -39,7 +39,7 @@ export default function Nav() {
           .join(" ")}
       >
         <nav className={s.bar} aria-label="Principal">
-          <a href="#top" className={s.brand} aria-label="PLAYOFF30 — inicio">
+          <a href="/#top" className={s.brand} aria-label="PLAYOFF30 — inicio">
             <Logo tone="light" />
           </a>
 
@@ -52,10 +52,10 @@ export default function Nav() {
           </div>
 
           <div className={s.actions}>
-            <a href="#probar" className={s.signin}>
+            <a href="/#probar" className={s.signin}>
               Entrar
             </a>
-            <a href="#probar" className={s.cta}>
+            <a href="/#probar" className={s.cta}>
               <span>
                 Probar<span className={s.ctaLong}> PLAYOFF30</span>
               </span>
@@ -87,7 +87,7 @@ export default function Nav() {
           </a>
         ))}
         <div className={s.sheetFoot}>
-          <a href="#probar" className="btn btn-electric" onClick={() => setOpen(false)}>
+          <a href="/#probar" className="btn btn-electric" onClick={() => setOpen(false)}>
             Probar PLAYOFF30
           </a>
           <a

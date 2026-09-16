@@ -51,7 +51,7 @@ export default function Club() {
             <div className={`${s.sumCell} ${s.sumBrand}`}>
               <Mark size={34} />
               <span className={s.sumBrandText}>
-                <b>CD Son Ferrer</b>
+                <b>CD Valmorán</b>
                 Temporada 2025/26 · coordinación de fútbol base
               </span>
             </div>
@@ -65,7 +65,7 @@ export default function Club() {
                 style={{ ["--d" as string]: `${140 + i * 80}ms` }}
               >
                 <div className={s.teamTop}>
-                  <span className={s.teamCrest}>SFE</span>
+                  <span className={s.teamCrest}>VAL</span>
                   <span>
                     <span className={s.teamName}>{t.name}</span>
                     <span className={s.teamCoach}>{t.coach}</span>
