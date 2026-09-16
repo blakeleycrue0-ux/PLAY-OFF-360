@@ -29,7 +29,7 @@ export default function FinalCTA() {
           </Reveal>
           <Reveal variant="up" delay={290}>
             <div className={s.ctas}>
-              <a href="#probar" className={`btn btn-lg ${s.primary}`}>
+              <a href="/entrar/" className={`btn btn-lg ${s.primary}`}>
                 Probar PLAYOFF30
                 <IconArrow size={16} />
               </a>
