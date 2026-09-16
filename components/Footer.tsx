@@ -26,8 +26,8 @@ const COLS = [
     title: "PLAYOFF30",
     links: [
       ["Cómo funciona", "/#asistente"],
-      ["Probar", "/#probar"],
-      ["Escríbenos", "/#probar"],
+      ["Probar", "/entrar/"],
+      ["Escríbenos", "/entrar/"],
     ],
   },
   {

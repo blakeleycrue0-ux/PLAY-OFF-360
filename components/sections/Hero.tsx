@@ -51,7 +51,7 @@ export default function Hero() {
 
             <Reveal variant="up" delay={380} className={s.actions}>
               <div className={s.ctas}>
-                <a href="#probar" className={`btn btn-lg ${s.ctaPrimary}`}>
+                <a href="/entrar/" className={`btn btn-lg ${s.ctaPrimary}`}>
                   Probar PLAYOFF30
                   <IconArrow size={16} />
                 </a>

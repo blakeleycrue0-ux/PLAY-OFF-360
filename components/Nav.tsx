@@ -52,10 +52,10 @@ export default function Nav() {
           </div>
 
           <div className={s.actions}>
-            <a href="/#probar" className={s.signin}>
+            <a href="/entrar/" className={s.signin}>
               Entrar
             </a>
-            <a href="/#probar" className={s.cta}>
+            <a href="/entrar/" className={s.cta}>
               <span>
                 Probar<span className={s.ctaLong}> PLAYOFF30</span>
               </span>
@@ -87,7 +87,7 @@ export default function Nav() {
           </a>
         ))}
         <div className={s.sheetFoot}>
-          <a href="/#probar" className="btn btn-electric" onClick={() => setOpen(false)}>
+          <a href="/entrar/" className="btn btn-electric" onClick={() => setOpen(false)}>
             Probar PLAYOFF30
           </a>
           <a

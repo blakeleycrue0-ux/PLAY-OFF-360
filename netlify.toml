@@ -6,5 +6,11 @@
   command = "npm run build"
   publish = "out"
 
+
+# La clave anon es pública (va en el bundle del navegador en cualquier app de
+# Supabase). Se fija aquí para que el build de Netlify funcione sin tener que
+# configurar nada en el panel. La service_role key jamás debe aparecer aquí.
 [build.environment]
   NODE_VERSION = "22"
+  NEXT_PUBLIC_SUPABASE_URL = "https://rzmmsxrooygbhufylowk.supabase.co"
+  NEXT_PUBLIC_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ6bW1zeHJvb3lnYmh1Znlsb3drIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk1MzEyNTAsImV4cCI6MjEwNTEwNzI1MH0.TBPNdBwkhVNuylu8Nmbk1V1-gfc1Aj4jK5z3ws7gc_Q"
