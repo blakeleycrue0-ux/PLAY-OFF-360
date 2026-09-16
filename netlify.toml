@@ -1,0 +1,10 @@
+# El sitio de Netlify se creó cuando el repositorio estaba vacío, así que sus
+# ajustes de la interfaz publicaban la raíz del repo (sin index.html → 404).
+# Esta configuración manda sobre los ajustes de la interfaz.
+
+[build]
+  command = "npm run build"
+  publish = "out"
+
+[build.environment]
+  NODE_VERSION = "22"
