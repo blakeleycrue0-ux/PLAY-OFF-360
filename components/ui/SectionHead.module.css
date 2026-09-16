@@ -1,0 +1,57 @@
+.head {
+  display: grid;
+  gap: 0;
+  align-items: end;
+}
+.main {
+  min-width: 0;
+}
+.title {
+  margin-top: 20px;
+  max-width: 15ch;
+}
+.title em {
+  font-family: var(--font-editorial);
+  font-style: italic;
+  font-weight: 400;
+  letter-spacing: -0.02em;
+}
+.dark .title {
+  color: #fff;
+}
+.dark .lead {
+  color: rgba(255, 255, 255, 0.62);
+}
+.dark .title em {
+  color: var(--pitch);
+}
+.lead {
+  margin-top: 22px;
+  max-width: 46ch;
+}
+.aside {
+  margin-top: 22px;
+  max-width: 42ch;
+  font-size: var(--fs-sm);
+  line-height: 1.55;
+  color: var(--ink-55);
+}
+.dark .aside {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+@media (min-width: 940px) {
+  .split {
+    grid-template-columns: minmax(0, 1.08fr) minmax(0, 0.92fr);
+    gap: clamp(40px, 5vw, 80px);
+  }
+  .split .title {
+    max-width: 13ch;
+  }
+  .split .lead {
+    margin-top: 0;
+  }
+  .aside {
+    margin-top: 16px;
+  }
+}

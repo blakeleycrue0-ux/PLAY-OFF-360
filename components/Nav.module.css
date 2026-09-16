@@ -1,0 +1,213 @@
+.wrap {
+  position: fixed;
+  inset: 0 0 auto 0;
+  z-index: 100;
+  padding: 14px var(--gutter);
+  transition: padding 0.5s var(--ease);
+  pointer-events: none;
+}
+.wrap > * {
+  pointer-events: auto;
+}
+
+.bar {
+  max-width: var(--maxw);
+  margin-inline: auto;
+  height: 58px;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 0 10px 0 16px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  transition:
+    background 0.5s var(--ease),
+    border-color 0.5s var(--ease),
+    box-shadow 0.5s var(--ease),
+    backdrop-filter 0.5s var(--ease),
+    height 0.4s var(--ease);
+}
+
+.scrolled .bar {
+  height: 54px;
+  background: rgba(5, 10, 23, 0.9);
+  border-color: rgba(255, 255, 255, 0.11);
+  backdrop-filter: saturate(160%) blur(18px);
+  -webkit-backdrop-filter: saturate(160%) blur(18px);
+  box-shadow: 0 10px 30px -14px rgba(0, 0, 0, 0.6);
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+  margin-right: 6px;
+}
+
+.links {
+  display: none;
+  align-items: center;
+  gap: 4px;
+  margin-inline: auto;
+}
+
+.link {
+  position: relative;
+  padding: 8px 13px;
+  border-radius: 999px;
+  font-size: 0.875rem;
+  font-weight: 480;
+  color: rgba(255, 255, 255, 0.64);
+  transition:
+    color 0.25s var(--ease-soft),
+    background 0.25s var(--ease-soft);
+}
+.link:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.signin {
+  display: none;
+  font-size: 0.875rem;
+  font-weight: 480;
+  color: rgba(255, 255, 255, 0.64);
+  padding: 8px 12px;
+  border-radius: 999px;
+  transition: color 0.25s var(--ease-soft);
+}
+.signin:hover {
+  color: #fff;
+}
+
+.cta {
+  height: 40px;
+  padding-inline: 18px;
+  white-space: nowrap;
+  border-radius: 999px;
+  background: #fff;
+  color: var(--ink);
+  font-size: 0.875rem;
+  font-weight: 560;
+  letter-spacing: -0.015em;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  transition:
+    transform 0.35s var(--ease),
+    background 0.25s var(--ease-soft),
+    box-shadow 0.35s var(--ease);
+  box-shadow: 0 6px 18px -8px rgba(0, 0, 0, 0.55);
+}
+.cta:hover {
+  transform: translateY(-1px);
+  background: var(--pitch);
+  box-shadow: 0 10px 26px -10px rgba(201, 242, 74, 0.6);
+}
+
+.ctaLong {
+  display: none;
+}
+
+.burger {
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  display: inline-grid;
+  place-items: center;
+  gap: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: #fff;
+}
+.burger span {
+  display: block;
+  width: 15px;
+  height: 1.5px;
+  background: currentColor;
+  border-radius: 2px;
+  transition:
+    transform 0.4s var(--ease),
+    opacity 0.25s var(--ease-soft);
+}
+.open .burger span:nth-child(1) {
+  transform: translateY(2.75px) rotate(45deg);
+}
+.open .burger span:nth-child(2) {
+  transform: translateY(-2.75px) rotate(-45deg);
+}
+
+.sheet {
+  position: fixed;
+  inset: 0;
+  background: var(--navy-950);
+  padding: 96px var(--gutter) 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-8px);
+  transition:
+    opacity 0.4s var(--ease),
+    transform 0.5s var(--ease),
+    visibility 0.4s;
+  z-index: 99;
+}
+.sheetOpen {
+  opacity: 1;
+  visibility: visible;
+  transform: none;
+}
+
+.sheetLink {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-weight: 620;
+  letter-spacing: -0.04em;
+  color: #fff;
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.sheetLink span:last-child {
+  font-family: var(--font-ui);
+  font-size: 0.6875rem;
+  letter-spacing: 0.16em;
+  color: rgba(255, 255, 255, 0.35);
+  font-weight: 600;
+}
+.sheetFoot {
+  margin-top: auto;
+  display: grid;
+  gap: 10px;
+}
+
+@media (min-width: 560px) {
+  .ctaLong {
+    display: inline;
+  }
+}
+
+@media (min-width: 900px) {
+  .links {
+    display: flex;
+  }
+  .signin {
+    display: inline-flex;
+  }
+  .burger {
+    display: none;
+  }
+  .sheet {
+    display: none;
+  }
+}
