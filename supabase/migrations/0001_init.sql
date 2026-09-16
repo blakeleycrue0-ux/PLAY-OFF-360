@@ -1,14 +1,16 @@
 -- ============================================================================
 -- PLAYOFF30 — esquema inicial
 --
--- Ejecutar en el SQL Editor de Supabase (una sola vez).
+-- Ya aplicada al proyecto. Se conserva tal cual se ejecutó: las migraciones
+-- no se reescriben, se corrigen con una nueva (ver 0002).
 --
 -- Modelo de seguridad: la clave anon es pública, así que TODA la protección
 -- vive aquí. Cada tabla tiene RLS activado y solo deja ver y tocar filas del
 -- club al que pertenece el usuario autenticado. El rol anon no accede a nada.
 -- ============================================================================
 
-create extension if not exists pgcrypto;
+-- gen_random_uuid() viene en el núcleo de Postgres desde la 13, así que no
+-- hace falta instalar pgcrypto ni ensuciar el esquema public con extensiones.
 
 -- ---------------------------------------------------------------- tipos ----
 do $$ begin
@@ -171,7 +173,7 @@ create index if not exists idx_messages_team     on public.messages (team_id, cr
 
 -- -------------------------------------------------------- updated_at ------
 create or replace function public.touch_updated_at()
-returns trigger language plpgsql as $$
+returns trigger language plpgsql set search_path = public, pg_temp as $$
 begin
   new.updated_at := now();
   return new;
