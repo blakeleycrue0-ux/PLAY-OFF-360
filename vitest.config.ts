@@ -14,6 +14,9 @@ export default defineConfig({
     alias: {
       '@airline/shared': pkg('shared'),
       '@airline/config': pkg('config'),
+      '@airline/domain/testing': fileURLToPath(
+        new URL('./packages/domain/src/testing/fixtures.ts', import.meta.url),
+      ),
       '@airline/domain': pkg('domain'),
       '@airline/db': pkg('db'),
       '@airline/simulation': pkg('simulation'),

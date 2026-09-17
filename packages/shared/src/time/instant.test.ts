@@ -54,6 +54,8 @@ describe('ManualClock', () => {
     expect(clock.now()).toBe(T);
     clock.advance(minutes(60));
     expect(toISO(clock.now())).toBe('2026-07-15T19:20:00.000Z');
-    expect(() => clock.set(T)).toThrow(/no puede retroceder/);
+    expect(() => {
+      clock.set(T);
+    }).toThrow(/no puede retroceder/);
   });
 });

@@ -57,7 +57,7 @@ export function subMoney(a: Money, b: Money): Money {
 }
 
 export function negateMoney(m: Money): Money {
-  return money(-m);
+  return money(m * -1);
 }
 
 /** Multiplica por un factor adimensional (un porcentaje, una cantidad de unidades). */

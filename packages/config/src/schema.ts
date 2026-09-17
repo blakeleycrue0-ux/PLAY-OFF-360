@@ -63,8 +63,23 @@ export const balanceSchema = z
       segmentShare: z.object({ business: unitInterval, leisure: unitInterval, vfr: unitInterval }),
       noFlyUtility: z.number(),
       maxRangeKm: positive,
+      dayOfWeekProfile: z.object({
+        business: z.array(nonNegative).length(7),
+        leisure: z.array(nonNegative).length(7),
+        vfr: z.array(nonNegative).length(7),
+      }),
+      peakDepartureHours: z.object({
+        business: z.array(z.number().min(0).max(23)).min(1),
+        leisure: z.array(z.number().min(0).max(23)).min(1),
+        vfr: z.array(z.number().min(0).max(23)).min(1),
+      }),
+      peakWidthHours: positive,
     }),
-    logit: z.object({ business: logitCoefficients, leisure: logitCoefficients, vfr: logitCoefficients }),
+    logit: z.object({
+      business: logitCoefficients,
+      leisure: logitCoefficients,
+      vfr: logitCoefficients,
+    }),
     fares: z.object({
       baseCents: z.object({ economy: positive.int(), business: positive.int() }),
       perKmCents: z.object({ economy: positive.int(), business: positive.int() }),
@@ -83,6 +98,7 @@ export const balanceSchema = z
     }),
     ancillary: z.object({ centsPerPaxByServiceLevel: z.array(nonNegative.int()).min(1) }),
     fleet: z.object({
+      cabinSpaceFactor: z.object({ economy: positive, business: positive }),
       wearPerFlightHour: nonNegative,
       wearPerCycle: nonNegative,
       ageReliabilityOnsetYears: nonNegative,
@@ -90,18 +106,20 @@ export const balanceSchema = z
       conditionReliabilityFloor: unitInterval,
       conditionReliabilitySpan: unitInterval,
       deferredCheckPenalty: nonNegative,
+      deferGraceFactor: nonNegative,
       checks: z.object({ A: check, B: check, C: check, D: check }),
     }),
     delays: z.object({
       technicalMaxMinutes: nonNegative,
-      technicalConditionThreshold: z.number().min(0).max(100),
       onTimeThresholdMinutes: positive,
     }),
     reputation: z.object({ initial: z.number(), min: z.number(), max: z.number() }),
   })
   .superRefine((cfg, ctx) => {
     const shareTotal =
-      cfg.demand.segmentShare.business + cfg.demand.segmentShare.leisure + cfg.demand.segmentShare.vfr;
+      cfg.demand.segmentShare.business +
+      cfg.demand.segmentShare.leisure +
+      cfg.demand.segmentShare.vfr;
     if (Math.abs(shareTotal - 1) > 1e-9) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
@@ -117,7 +135,11 @@ export const balanceSchema = z
       });
     }
     if (cfg.reputation.min >= cfg.reputation.max) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['reputation'], message: 'min debe ser menor que max.' });
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['reputation'],
+        message: 'min debe ser menor que max.',
+      });
     }
     if (cfg.fleet.conditionReliabilityFloor + cfg.fleet.conditionReliabilitySpan > 1 + 1e-9) {
       ctx.addIssue({
@@ -130,7 +152,11 @@ export const balanceSchema = z
     for (let i = 1; i < checks.length; i++) {
       const previous = checks[i - 1];
       const current = checks[i];
-      if (previous !== undefined && current !== undefined && current.intervalHours <= previous.intervalHours) {
+      if (
+        previous !== undefined &&
+        current !== undefined &&
+        current.intervalHours <= previous.intervalHours
+      ) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: ['fleet', 'checks'],
@@ -143,7 +169,9 @@ export const balanceSchema = z
 export function validateBalance(config: BalanceConfig): BalanceConfig {
   const result = balanceSchema.safeParse(config);
   if (!result.success) {
-    const issues = result.error.issues.map((i) => `  · ${i.path.join('.')}: ${i.message}`).join('\n');
+    const issues = result.error.issues
+      .map((i) => `  · ${i.path.join('.')}: ${i.message}`)
+      .join('\n');
     throw new Error(`Parámetros de balance inválidos (versión ${config.version}):\n${issues}`);
   }
   return config;

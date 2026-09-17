@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { bernoulli, createRng, nextGaussian, nextInt, seedFrom, weightedPick } from './seeded-rng.js';
+import {
+  bernoulli,
+  createRng,
+  nextGaussian,
+  nextInt,
+  seedFrom,
+  weightedPick,
+} from './seeded-rng.js';
 
 describe('RNG determinista', () => {
   it('la misma semilla produce exactamente la misma secuencia', () => {

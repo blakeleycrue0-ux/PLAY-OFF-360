@@ -10,12 +10,27 @@ import tseslint from 'typescript-eslint';
  */
 const FORBIDDEN_IN_PURE_PACKAGES = [
   { group: ['pg', 'pg-*'], message: 'El dominio no puede depender de PostgreSQL (ADR-005).' },
-  { group: ['fastify', '@fastify/*'], message: 'El dominio no puede depender de Fastify (ADR-005).' },
+  {
+    group: ['fastify', '@fastify/*'],
+    message: 'El dominio no puede depender de Fastify (ADR-005).',
+  },
   { group: ['ioredis', 'redis'], message: 'El dominio no puede depender de Redis (ADR-005).' },
-  { group: ['react', 'react-*', 'next', 'next/*', 'expo', 'expo-*', 'react-native'], message: 'El dominio no puede depender de la capa de cliente (ADR-005).' },
-  { group: ['node:*', 'fs', 'path', 'os', 'child_process', 'http', 'https', 'net', 'dns'], message: 'El dominio no puede usar APIs de Node: debe correr también en el cliente (ADR-005).' },
-  { group: ['@airline/db', '@airline/simulation', '@airline/api', '@airline/worker'], message: 'El dominio no puede depender de infraestructura ni de aplicaciones (ADR-005).' },
-  { group: ['dotenv', 'pino', 'zod-to-*'], message: 'Dependencia de infraestructura no permitida en un paquete puro (ADR-005).' },
+  {
+    group: ['react', 'react-*', 'next', 'next/*', 'expo', 'expo-*', 'react-native'],
+    message: 'El dominio no puede depender de la capa de cliente (ADR-005).',
+  },
+  {
+    group: ['node:*', 'fs', 'path', 'os', 'child_process', 'http', 'https', 'net', 'dns'],
+    message: 'El dominio no puede usar APIs de Node: debe correr también en el cliente (ADR-005).',
+  },
+  {
+    group: ['@airline/db', '@airline/simulation', '@airline/api', '@airline/worker'],
+    message: 'El dominio no puede depender de infraestructura ni de aplicaciones (ADR-005).',
+  },
+  {
+    group: ['dotenv', 'pino', 'zod-to-*'],
+    message: 'Dependencia de infraestructura no permitida en un paquete puro (ADR-005).',
+  },
 ];
 
 export default tseslint.config(
@@ -36,20 +51,34 @@ export default tseslint.config(
   {
     languageOptions: {
       parserOptions: {
-        projectService: true,
+        // Un proyecto aparte que sí incluye los tests: los tsconfig de cada
+        // paquete los excluyen para no emitirlos, pero el lint con información
+        // de tipos necesita verlos.
+        project: ['./tsconfig.eslint.json'],
         tsconfigRootDir: import.meta.dirname,
       },
     },
     plugins: { 'import-x': importX },
     settings: {
-      'import-x/resolver': { typescript: { project: ['./packages/*/tsconfig.json', './apps/*/tsconfig.json', './scripts/tsconfig.json'] } },
+      'import-x/resolver': {
+        typescript: {
+          project: [
+            './packages/*/tsconfig.json',
+            './apps/*/tsconfig.json',
+            './scripts/tsconfig.json',
+          ],
+        },
+      },
     },
     rules: {
       // Calidad exigida por el encargo.
       '@typescript-eslint/no-explicit-any': 'error',
       '@typescript-eslint/explicit-module-boundary-types': 'error',
       '@typescript-eslint/consistent-type-imports': ['error', { prefer: 'type-imports' }],
-      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
+      ],
       '@typescript-eslint/switch-exhaustiveness-check': 'error',
       '@typescript-eslint/no-unnecessary-condition': 'off',
       '@typescript-eslint/restrict-template-expressions': ['error', { allowNumber: true }],

@@ -72,6 +72,12 @@ export interface BalanceConfig {
     /** Utilidad de la opción "no volar". Ancla el denominador del logit. */
     readonly noFlyUtility: number;
     readonly maxRangeKm: number;
+    /** Perfil semanal de demanda por segmento: siete multiplicadores, de domingo a sábado. */
+    readonly dayOfWeekProfile: BySegment<readonly number[]>;
+    /** Horas de salida preferidas por cada segmento, en hora local del origen. */
+    readonly peakDepartureHours: BySegment<readonly number[]>;
+    /** Anchura del pico horario, en horas: cuánto se tolera alejarse del óptimo. */
+    readonly peakWidthHours: number;
   };
 
   readonly logit: BySegment<LogitCoefficients>;
@@ -101,6 +107,11 @@ export interface BalanceConfig {
   };
 
   readonly fleet: {
+    /**
+     * Espacio que ocupa una plaza de cada clase, en unidades de plaza de
+     * turista. Gobierna qué configuraciones de cabina caben en un tipo.
+     */
+    readonly cabinSpaceFactor: ByCabin<number>;
     readonly wearPerFlightHour: number;
     readonly wearPerCycle: number;
     readonly ageReliabilityOnsetYears: number;
@@ -108,13 +119,14 @@ export interface BalanceConfig {
     readonly conditionReliabilityFloor: number;
     readonly conditionReliabilitySpan: number;
     readonly deferredCheckPenalty: number;
+    /** Margen de horas extra que gana un check al aplazarlo, como fracción de su intervalo. */
+    readonly deferGraceFactor: number;
     readonly checks: Readonly<Record<'A' | 'B' | 'C' | 'D', MaintenanceCheckConfig>>;
   };
 
   readonly delays: {
     /** Retraso técnico máximo, en minutos, con el avión en el peor estado. */
     readonly technicalMaxMinutes: number;
-    readonly technicalConditionThreshold: number;
     readonly onTimeThresholdMinutes: number;
   };
 

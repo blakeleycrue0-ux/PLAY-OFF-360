@@ -49,6 +49,18 @@ export const DEFAULT_BALANCE: BalanceConfig = {
     segmentShare: { business: 0.22, leisure: 0.55, vfr: 0.23 },
     noFlyUtility: -2,
     maxRangeKm: 12_000,
+    dayOfWeekProfile: {
+      //         dom   lun   mar   mié   jue   vie   sáb
+      business: [0.55, 1.35, 1.05, 1.1, 1.3, 1.0, 0.65],
+      leisure: [1.15, 0.8, 0.8, 0.85, 0.95, 1.3, 1.15],
+      vfr: [1.2, 0.85, 0.85, 0.85, 0.95, 1.2, 1.1],
+    },
+    peakDepartureHours: {
+      business: [7, 18],
+      leisure: [10, 16],
+      vfr: [11, 17],
+    },
+    peakWidthHours: 2.5,
   },
 
   logit: {
@@ -107,6 +119,7 @@ export const DEFAULT_BALANCE: BalanceConfig = {
   },
 
   fleet: {
+    cabinSpaceFactor: { economy: 1, business: 1.5 },
     wearPerFlightHour: 0.01,
     wearPerCycle: 0.02,
     ageReliabilityOnsetYears: 15,
@@ -114,17 +127,27 @@ export const DEFAULT_BALANCE: BalanceConfig = {
     conditionReliabilityFloor: 0.72,
     conditionReliabilitySpan: 0.28,
     deferredCheckPenalty: 0.06,
+    deferGraceFactor: 0.25,
     checks: {
       A: { intervalHours: 600, durationDays: 1, costPerSeatCents: 6_670, conditionRestored: 8 },
       B: { intervalHours: 3_000, durationDays: 3, costPerSeatCents: 25_000, conditionRestored: 20 },
-      C: { intervalHours: 12_000, durationDays: 14, costPerSeatCents: 211_100, conditionRestored: 45 },
-      D: { intervalHours: 24_000, durationDays: 45, costPerSeatCents: 1_166_700, conditionRestored: 95 },
+      C: {
+        intervalHours: 12_000,
+        durationDays: 14,
+        costPerSeatCents: 211_100,
+        conditionRestored: 45,
+      },
+      D: {
+        intervalHours: 24_000,
+        durationDays: 45,
+        costPerSeatCents: 1_166_700,
+        conditionRestored: 95,
+      },
     },
   },
 
   delays: {
     technicalMaxMinutes: 45,
-    technicalConditionThreshold: 60,
     onTimeThresholdMinutes: 15,
   },
 

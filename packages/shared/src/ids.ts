@@ -22,21 +22,25 @@ const IATA_RE = /^[A-Z]{3}$/;
 const COUNTRY_RE = /^[A-Z]{2}$/;
 const TYPE_CODE_RE = /^[A-Z]{2,4}[0-9]{1,4}$/;
 
-function checked<T extends string>(value: string, re: RegExp, label: string): T {
+function checked(value: string, re: RegExp, label: string): string {
   if (!re.test(value)) {
     throw new DomainError('invalid_identifier', `${label} inválido: "${value}"`, { value, label });
   }
-  return value as T;
+  return value;
 }
 
-export const worldId = (v: string): WorldId => checked(v, UUID_RE, 'WorldId');
-export const accountId = (v: string): AccountId => checked(v, UUID_RE, 'AccountId');
-export const airlineId = (v: string): AirlineId => checked(v, UUID_RE, 'AirlineId');
-export const aircraftId = (v: string): AircraftId => checked(v, UUID_RE, 'AircraftId');
-export const routeId = (v: string): RouteId => checked(v, UUID_RE, 'RouteId');
-export const scheduleId = (v: string): ScheduleId => checked(v, UUID_RE, 'ScheduleId');
-export const flightId = (v: string): FlightId => checked(v, UUID_RE, 'FlightId');
-export const airportCode = (v: string): AirportCode => checked(v.toUpperCase(), IATA_RE, 'AirportCode');
-export const countryCode = (v: string): CountryCode => checked(v.toUpperCase(), COUNTRY_RE, 'CountryCode');
+export const worldId = (v: string): WorldId => checked(v, UUID_RE, 'WorldId') as WorldId;
+export const accountId = (v: string): AccountId => checked(v, UUID_RE, 'AccountId') as AccountId;
+export const airlineId = (v: string): AirlineId => checked(v, UUID_RE, 'AirlineId') as AirlineId;
+export const aircraftId = (v: string): AircraftId =>
+  checked(v, UUID_RE, 'AircraftId') as AircraftId;
+export const routeId = (v: string): RouteId => checked(v, UUID_RE, 'RouteId') as RouteId;
+export const scheduleId = (v: string): ScheduleId =>
+  checked(v, UUID_RE, 'ScheduleId') as ScheduleId;
+export const flightId = (v: string): FlightId => checked(v, UUID_RE, 'FlightId') as FlightId;
+export const airportCode = (v: string): AirportCode =>
+  checked(v.toUpperCase(), IATA_RE, 'AirportCode') as AirportCode;
+export const countryCode = (v: string): CountryCode =>
+  checked(v.toUpperCase(), COUNTRY_RE, 'CountryCode') as CountryCode;
 export const aircraftTypeCode = (v: string): AircraftTypeCode =>
-  checked(v.toUpperCase(), TYPE_CODE_RE, 'AircraftTypeCode');
+  checked(v.toUpperCase(), TYPE_CODE_RE, 'AircraftTypeCode') as AircraftTypeCode;

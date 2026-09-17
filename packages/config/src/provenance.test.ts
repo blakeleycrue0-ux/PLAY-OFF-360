@@ -12,7 +12,10 @@ describe('parámetros de balance', () => {
   it('rechaza una elasticidad de precio positiva', () => {
     const broken = {
       ...DEFAULT_BALANCE,
-      logit: { ...DEFAULT_BALANCE.logit, leisure: { ...DEFAULT_BALANCE.logit.leisure, price: 1.2 } },
+      logit: {
+        ...DEFAULT_BALANCE.logit,
+        leisure: { ...DEFAULT_BALANCE.logit.leisure, price: 1.2 },
+      },
     };
     expect(() => validateBalance(broken)).toThrow(/logit.leisure.price/);
   });
@@ -20,7 +23,10 @@ describe('parámetros de balance', () => {
   it('rechaza cuotas de segmento que no suman 1', () => {
     const broken = {
       ...DEFAULT_BALANCE,
-      demand: { ...DEFAULT_BALANCE.demand, segmentShare: { business: 0.5, leisure: 0.5, vfr: 0.5 } },
+      demand: {
+        ...DEFAULT_BALANCE.demand,
+        segmentShare: { business: 0.5, leisure: 0.5, vfr: 0.5 },
+      },
     };
     expect(() => validateBalance(broken)).toThrow(/segmentShare/);
   });
@@ -39,7 +45,9 @@ describe('procedencia de los parámetros', () => {
   // económica inventada: añadir un parámetro obliga a declarar de dónde sale.
   it('todo parámetro declara su procedencia', () => {
     const undeclared = paths.filter((p) => !(p in PARAMETER_PROVENANCE));
-    expect(undeclared, `Parámetros sin procedencia declarada:\n${undeclared.join('\n')}`).toEqual([]);
+    expect(undeclared, `Parámetros sin procedencia declarada:\n${undeclared.join('\n')}`).toEqual(
+      [],
+    );
   });
 
   it('no hay procedencias declaradas para parámetros que ya no existen', () => {
