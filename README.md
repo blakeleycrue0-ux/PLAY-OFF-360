@@ -1,114 +1,50 @@
-# PLAYOFF30 — landing page
+# Airline World — simulador de gestión de aerolíneas (nombre provisional)
 
-Landing page de **PLAYOFF30**, el software de operación diaria para equipos de
-fútbol: convocatorias, asistencia, partidos y comunicación en un solo sitio.
+Juego/aplicación de gestión de aerolíneas para **iOS, Android y web**, con un
+**mundo online persistente compartido** entre jugadores reales.
 
-Esta fase es **solo la landing**. No hay backend, autenticación, base de datos
-ni aplicación real: las interfaces de producto que aparecen en la página son
-componentes React/CSS diseñados para parecer capturas de un producto que existe.
+El jugador no pilota: es el **CEO**. Funda su compañía, compra o arrienda
+aviones, abre rutas entre aeropuertos reales, fija precios y frecuencias,
+contrata personal, mantiene la flota y compite con otras aerolíneas — que son
+otros jugadores — por demanda, slots y reputación dentro del mismo mundo.
 
-## Stack
+> **Estado del repositorio: fase de diseño.** Todavía no hay código de
+> producto. Este repositorio contiene, de momento, el diseño técnico completo
+> del sistema. La implementación empieza cuando el diseño esté cerrado.
 
-- **Next.js 16** (App Router) + **React 19** + **TypeScript**
-- **CSS propio**: tokens en `app/globals.css` + CSS Modules por componente.
-  Sin Tailwind, sin librerías de UI, sin librerías de animación.
-- **next/font** con Archivo (titulares e interfaz) e Instrument Serif (acentos
-  editoriales en cursiva).
+---
 
-## Arranque
+## Documentación
 
-```bash
-npm install
-npm run dev      # http://localhost:3000
-npm run build
-npm start
-npm run format   # prettier
-```
+| Documento | Contenido |
+|---|---|
+| [01 — Arquitectura](docs/01-arquitectura.md) | Stack, servicios, despliegue, decisiones estructurales y sus porqués |
+| [02 — Modelo de datos](docs/02-modelo-de-datos.md) | Entidades, esquema Postgres, índices, particionado |
+| [03 — Simulación y vuelos](docs/03-simulacion-y-vuelos.md) | Motor por eventos, reloj del mundo, ciclo de vida de un vuelo |
+| [04 — Economía y demanda](docs/04-economia-y-demanda.md) | Modelo de gravedad, reparto logit, P&L, libro contable |
+| [05 — Mundo online](docs/05-mundo-online.md) | Shards, tiempo real, slots, alianzas, rankings, anti-abuso |
+| [06 — Eventos y noticias](docs/06-eventos-y-noticias.md) | Incidentes, probabilidades, tratamiento no gráfico, feed de noticias |
+| [07 — Cliente, mapa y UX](docs/07-cliente-mapa-ux.md) | App multiplataforma, mapa en vivo, sistema de diseño |
+| [08 — MVP y roadmap](docs/08-mvp-y-roadmap.md) | Qué entra y qué NO entra en el MVP, fases de desarrollo |
+| [09 — Riesgos y decisiones abiertas](docs/09-riesgos-y-decisiones-abiertas.md) | Lo que puede hundir el proyecto y lo que falta decidir |
 
-## Estructura
+## Resumen ejecutivo en una página
 
-```
-app/
-  layout.tsx          tipografías, metadatos, icono
-  page.tsx            orden narrativo de las secciones
-  globals.css         sistema de diseño (color, tipografía, botones, reveals)
-components/
-  Nav.tsx             barra flotante + hoja de navegación en móvil
-  Footer.tsx
-  brand/Logo.tsx      símbolo (arco de córner + punto) y wordmark
-  product/            interfaces ficticias reutilizables (Chrome, TodayScreen)
-  sections/           las doce secciones de la página
-  ui/                 Reveal, Counter, Avatar, Icon, SectionHead
-lib/
-  data.ts             el club ficticio: plantilla, familias, partido, equipos
-  useInView.ts        IntersectionObserver compartido
-  useSequence.ts      secuencias por pasos y máquina de escribir
-```
+**La idea técnica que lo sostiene todo:** un vuelo no se simula tick a tick.
+Se **planifica** (despegue, llegada, ruta geodésica) y se **resuelve** una sola
+vez al aterrizar. El servidor no mueve aviones: programa trabajos. El cliente
+interpola la posición desde el reloj. Así 50.000 vuelos simultáneos cuestan lo
+mismo que 500, los vuelos continúan con la app cerrada, y todo el mundo ve
+exactamente el mismo mundo.
 
-## ⚠️ Antes de publicar: datos legales
+**Lo que hace que no sea un clicker:** la demanda se reparte entre competidores
+con un modelo de elección discreta (logit). Meter más aviones en una ruta no da
+más pasajeros: da menos ocupación por avión. Se puede tener 200 aviones y
+perder dinero cada día. El objetivo no es el saldo, es el margen.
 
-Las páginas legales están escritas pero **incompletas a propósito**. Faltan los
-datos identificativos del titular, que son obligatorios (art. 10 LSSI-CE y RGPD)
-y no se pueden inventar.
+**Lo que hace que el mundo esté vivo:** slots finitos por aeropuerto,
+combustible con precio mundial variable, eventos regionales que afectan a todos
+a la vez y noticias generadas desde el log real de acontecimientos.
 
-Rellena `lib/legal.ts` una sola vez —razón social, NIF, domicilio y correo— y el
-aviso naranja que aparece en las cuatro páginas desaparece solo. Conviene además
-que un abogado revise los textos antes de publicarlos: son una base sólida, no un
-dictamen.
-
-## Legal y cookies
-
-```
-app/legal/aviso-legal/    titular, uso del sitio, propiedad intelectual
-app/legal/privacidad/     RGPD: datos, bases jurídicas, derechos, menores
-app/legal/cookies/        qué se guarda y cómo cambiarlo
-app/legal/terminos/       condiciones de acceso
-```
-
-El sitio **no instala cookies de analítica, publicidad ni redes sociales**. No hay
-Google Analytics, ni píxeles, ni contenido incrustado de terceros; las tipografías
-se sirven desde el propio dominio. Lo único que se guarda es la decisión del
-usuario en `localStorage`, bajo la clave `playoff30.consent.v1`.
-
-El banner (`components/CookieConsent.tsx`) ofrece aceptar todo, solo las
-necesarias, o configurar por categorías. La preferencia se puede cambiar desde el
-enlace del pie de página. Las categorías de analítica y marketing existen para
-cuando haga falta: hoy no controlan nada, y así se dice en la política.
-
-## Decisiones
-
-**Un solo club ficticio.** Todas las pantallas usan los mismos nombres, el mismo
-partido y la misma semana (`lib/data.ts`). Es lo que hace que la página parezca
-un producto y no una colección de mockups sueltos.
-
-**Narrativa antes que catálogo.** Las secciones cuentan una historia —así se
-gestiona hoy, esto no debería ser trabajo del entrenador, existe otra forma,
-PLAYOFF30 entiende el contexto, lo ejecuta, el equipo se entera, empiezas con un
-equipo, creces con el club— en lugar de repetir «PLAYOFF30 hace X».
-
-**Animación con presupuesto.** Todo el movimiento pasa por `useInView`:
-apariciones escalonadas, contadores, barras que crecen y una secuencia de
-conversación en la sección del asistente. Todo se desactiva con
-`prefers-reduced-motion`.
-
-**Sin datos inventados de negocio.** No hay clientes, logos, testimonios ni
-métricas de tracción. Las cifras que aparecen pertenecen al equipo ficticio de
-la demo.
-
-**Todo el club es inventado.** CD Valmorán, CF Alcorada, el campo, la competición,
-los jugadores y las familias no existen, y no corresponden a ninguna localidad
-real. Es intencionado: usar el nombre de un club real en material de producto
-invita a problemas de marca y de imagen. El pie de página lo dice de forma
-explícita.
-
-**Exportación estática.** `output: "export"` con `trailingSlash: true`, así que
-cada ruta se publica como `carpeta/index.html` y se sirve desde cualquier CDN sin
-runtime de Next. El `netlify.toml` fija el comando de build y el directorio
-`out/`.
-
-## Móvil
-
-El móvil no es el escritorio estrechado. Cambian la navegación (hoja completa),
-los CTA (ancho completo), la tabla de plantilla (tres columnas en vez de cinco),
-el montón de la sección de problema (apilado), el carrusel de roles (rail con
-scroll y snap) y la pantalla del hero (se recorta el panel de partido).
+**Stack:** monorepo TypeScript · Postgres + PostGIS · Node/Fastify · worker de
+simulación · Redis · WebSocket · React Native (Expo) + Next.js web.
