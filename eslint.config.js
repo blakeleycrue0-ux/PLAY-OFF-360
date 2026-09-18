@@ -117,6 +117,20 @@ export default tseslint.config(
     rules: { 'no-console': 'off', 'max-lines-per-function': 'off' },
   },
   {
+    // Frontera de datos: aquí es donde las filas del driver, que no tienen tipo,
+    // se convierten en entidades tipadas. Es el único sitio del repositorio
+    // donde se permite tocar valores sin tipar, y está acotado a propósito.
+    files: ['packages/db/src/mappers/**/*.ts'],
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'off',
+      '@typescript-eslint/no-unsafe-assignment': 'off',
+      '@typescript-eslint/no-unsafe-member-access': 'off',
+      '@typescript-eslint/no-unsafe-argument': 'off',
+      '@typescript-eslint/no-unsafe-return': 'off',
+      '@typescript-eslint/no-unsafe-call': 'off',
+    },
+  },
+  {
     files: ['**/*.test.ts', '**/testing/**/*.ts'],
     rules: {
       'max-lines-per-function': 'off',

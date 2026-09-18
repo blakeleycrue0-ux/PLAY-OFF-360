@@ -38,8 +38,11 @@ export default defineConfig({
           name: 'db',
           include: ['packages/{db,simulation}/**/*.test.ts', 'apps/**/*.test.ts'],
           environment: 'node',
-          // Los tests contra PostgreSQL comparten una base; se ejecutan en serie.
+          // El esquema se reconstruye una vez por ejecución, antes de todo.
+          globalSetup: ['./packages/db/src/testing/global-setup.ts'],
+          // Comparten una única base de datos, así que van en serie.
           fileParallelism: false,
+          poolOptions: { forks: { singleFork: true } },
           hookTimeout: 60_000,
           testTimeout: 60_000,
         },
