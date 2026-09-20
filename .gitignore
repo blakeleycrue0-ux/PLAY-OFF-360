@@ -1,5 +1,8 @@
 node_modules/
-dist/
+# La salida de compilación de los paquetes, no la del sitio: esa es /dist y se
+# versiona (ver más abajo).
+packages/*/dist/
+apps/*/dist/
 *.tsbuildinfo
 .env
 .env.local
