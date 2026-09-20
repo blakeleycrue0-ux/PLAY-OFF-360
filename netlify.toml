@@ -1,0 +1,28 @@
+# Despliegue de la consola de operaciones.
+#
+# El sitio es una única página estática que se construye a partir de la
+# plantilla y de la instantánea de datos versionada. No necesita base de datos
+# en tiempo de construcción: generar la instantánea exige un mundo simulado, y
+# eso se hace en desarrollo con `pnpm ui:build`.
+
+[build]
+  command = "pnpm ui:preview"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "22"
+  # Playwright sólo se usa en desarrollo para revisar la página; sin esto,
+  # la instalación se descargaría un navegador entero en cada construcción.
+  PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD = "1"
+
+# Una sola página: cualquier ruta la sirve, en vez de devolver un 404.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"

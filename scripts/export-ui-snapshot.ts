@@ -7,8 +7,9 @@ import {
   worldTotals,
   worldsRepo,
 } from '@airline/db';
-import { calculateFlightPosition, greatCircleDistanceKm } from '@airline/domain';
-import { addDays, instant, toEuros, toISO, type Instant } from '@airline/shared';
+import { greatCircleDistanceKm } from '@airline/domain';
+import { addDays, instant, startOfUtcDay, toEuros, toISO, type Instant } from '@airline/shared';
+import { toDbTimestamp } from '@airline/db';
 import { projectPoint, type Projection } from './lib/projection.js';
 
 /**
@@ -45,10 +46,11 @@ async function main(): Promise<void> {
       throw new Error('No hay ningún mundo abierto. Ejecuta antes la simulación.');
 
     const now: Instant = instant(Date.now());
-    const dayStart = addDays(now, -1);
+    // Los totales y la clasificación miran las últimas 24 horas de mundo.
+    const since = addDays(now, -1);
 
-    const totals = await worldTotals(pool, world.id, dayStart, addDays(now, 1));
-    const airlines = await airlineSummaries(pool, world.id, dayStart, addDays(now, 1));
+    const totals = await worldTotals(pool, world.id, since, addDays(now, 1));
+    const airlines = await airlineSummaries(pool, world.id, since, addDays(now, 1));
 
     const airportRows = await pool.query(`
       SELECT a.iata, a.name, a.city, a.country, a.size_class, a.market_weight,
@@ -70,10 +72,20 @@ async function main(): Promise<void> {
       [world.id],
     );
 
+    // Se exporta el día entero, no sólo lo que está en el aire en este
+    // instante. La vista previa es estática y tiene que seguir viva mañana:
+    // con un día completo puede reproducirlo contra el reloj real, y como las
+    // plantillas de las compañías se repiten a diario, lo que se ve a las 19:20
+    // de cualquier día es lo que de verdad opera a esa hora.
+    const dayStart = startOfUtcDay(now);
+    const dayEnd = addDays(dayStart, 1);
+
     const flightRows = await pool.query(
       `
-      SELECT f.id, f.flight_number, f.origin, f.destination, f.actual_departure, f.scheduled_arrival,
-             f.pax, f.seats_offered, al.name AS airline, al.icao_code, al.npc_strategy, t.name AS aircraft,
+      SELECT f.id, f.flight_number, f.origin, f.destination,
+             COALESCE(f.actual_departure, f.scheduled_departure) AS departure,
+             f.scheduled_arrival, f.status, f.pax, f.seats_offered,
+             al.name AS airline, t.name AS aircraft,
              ST_Y(o.location::geometry) AS o_lat, ST_X(o.location::geometry) AS o_lon,
              ST_Y(d.location::geometry) AS d_lat, ST_X(d.location::geometry) AS d_lon
       FROM flights f
@@ -82,8 +94,12 @@ async function main(): Promise<void> {
       JOIN aircraft_types t ON t.code = ac.type_code
       JOIN airports o ON o.iata = f.origin
       JOIN airports d ON d.iata = f.destination
-      WHERE f.world_id = $1 AND f.status = 'departed'`,
-      [world.id],
+      WHERE f.world_id = $1
+        AND f.status <> 'cancelled'
+        AND f.scheduled_departure >= $2
+        AND f.scheduled_departure < $3
+      ORDER BY f.scheduled_departure`,
+      [world.id, toDbTimestamp(dayStart), toDbTimestamp(dayEnd)],
     );
 
     const snapshot = {
@@ -125,40 +141,41 @@ async function main(): Promise<void> {
           y2: Math.round(to.y * 10) / 10,
         };
       }),
+      // Minuto del día en que sale y en que llega, en vez de instantes
+      // absolutos: es lo que permite al cliente situar el día sobre la fecha
+      // de hoy sin arrastrar la fecha en la que se simuló.
+      dayStart: toISO(dayStart),
       flights: flightRows.rows.map((r) => {
         const origin = { latitude: Number(r['o_lat']), longitude: Number(r['o_lon']) };
         const destination = { latitude: Number(r['d_lat']), longitude: Number(r['d_lon']) };
-        const departure = instant(new Date(r['actual_departure'] as Date).getTime());
+        const departure = instant(new Date(r['departure'] as Date).getTime());
         const arrival = instant(new Date(r['scheduled_arrival'] as Date).getTime());
-        const position = calculateFlightPosition(origin, destination, departure, arrival, now);
-        const point = project(position.longitude, position.latitude);
         const pax = r['pax'] as { economy: number; business: number } | null;
         const seats = r['seats_offered'] as { economy: number; business: number };
+        const seatsTotal = seats.economy + seats.business;
+
+        // Un vuelo que la simulación no llegó a resolver no tiene pasaje
+        // escrito. Se estima con la ocupación media del mundo para que la
+        // reproducción no muestre aviones vacíos que en realidad iban llenos.
+        const paxTotal =
+          pax === null ? Math.round(seatsTotal * totals.loadFactor) : pax.economy + pax.business;
 
         return {
           id: r['id'] as string,
           callsign: r['flight_number'] as string,
           airline: r['airline'] as string,
-          strategy: r['npc_strategy'] as string,
           aircraft: r['aircraft'] as string,
           origin: r['origin'] as string,
           destination: r['destination'] as string,
-          departure: toISO(departure),
-          arrival: toISO(arrival),
+          depMs: departure - dayStart,
+          arrMs: arrival - dayStart,
           distanceKm: Math.round(greatCircleDistanceKm(origin, destination)),
-          originLat: Math.round(origin.latitude * 1e4) / 1e4,
-          originLon: Math.round(origin.longitude * 1e4) / 1e4,
-          destLat: Math.round(destination.latitude * 1e4) / 1e4,
-          destLon: Math.round(destination.longitude * 1e4) / 1e4,
-          pax: pax === null ? 0 : pax.economy + pax.business,
-          seats: seats.economy + seats.business,
-          heading: Math.round(position.heading),
-          altitudeM: Math.round(position.altitudeMeters),
-          progress: Math.round(position.progress * 1000) / 1000,
-          from: projectAirport(project, origin),
-          to: projectAirport(project, destination),
-          x: Math.round(point.x * 10) / 10,
-          y: Math.round(point.y * 10) / 10,
+          oLat: Math.round(origin.latitude * 1e4) / 1e4,
+          oLon: Math.round(origin.longitude * 1e4) / 1e4,
+          dLat: Math.round(destination.latitude * 1e4) / 1e4,
+          dLon: Math.round(destination.longitude * 1e4) / 1e4,
+          pax: paxTotal,
+          seats: seatsTotal,
         };
       }),
       airlines: airlines
@@ -183,20 +200,12 @@ async function main(): Promise<void> {
     await writeFile(OUT_FILE, `${JSON.stringify(snapshot)}\n`);
     console.log(
       `Instantánea: ${snapshot.airports.length} aeropuertos, ${snapshot.routes.length} rutas, ` +
-        `${snapshot.flights.length} vuelos en el aire, ${snapshot.airlines.length} aerolíneas.`,
+        `${snapshot.flights.length} vuelos del día, ${snapshot.airlines.length} aerolíneas.`,
     );
     console.log(`Escrita en ${path.relative(ROOT, OUT_FILE)}`);
   } finally {
     await pool.end();
   }
-}
-
-function projectAirport(
-  project: (lon: number, lat: number) => { x: number; y: number },
-  point: { latitude: number; longitude: number },
-): { x: number; y: number } {
-  const projected = project(point.longitude, point.latitude);
-  return { x: Math.round(projected.x * 10) / 10, y: Math.round(projected.y * 10) / 10 };
 }
 
 main().catch((error: unknown) => {

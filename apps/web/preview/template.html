@@ -101,6 +101,15 @@
     letter-spacing: 0.06em;
   }
 
+  /* Decir qué se está mirando importa: esto es un día grabado, no tráfico
+     real, y la página no debe insinuar otra cosa. */
+  .replay {
+    border: 1px solid var(--hairline-strong);
+    padding: 2px 7px;
+    border-radius: 2px;
+    white-space: nowrap;
+  }
+
   .stat {
     display: flex;
     flex-direction: column;
@@ -793,6 +802,7 @@
     <div class="brand">
       <b>Airline&nbsp;World</b>
       <span id="world-name"></span>
+      <span class="replay" id="replay-note"></span>
     </div>
     <div class="stat">
       <span class="k">En el aire</span><span class="v live" id="t-air">0</span>
@@ -954,6 +964,41 @@
       return (Math.atan2(y, x) * DEG + 360) % 360;
     }
 
+    /* ─── Reproducción del día simulado ─────────────────────────────
+     * La instantánea guarda un día completo con las horas de cada vuelo
+     * medidas desde medianoche. La página lo sitúa sobre la fecha de hoy,
+     * de modo que a las 19:20 se ve lo que de verdad opera a las 19:20.
+     *
+     * No es un truco de escaparate: las plantillas de programación de las
+     * compañías se repiten a diario, así que reproducir el día es lo mismo
+     * que mirar el día siguiente.
+     */
+    var MS_DAY = 86400000;
+
+    function todayStart(now) {
+      return Math.floor(now / MS_DAY) * MS_DAY;
+    }
+
+    /** Horario de un vuelo situado sobre el día de hoy. */
+    function schedule(f, now) {
+      var base = todayStart(now);
+      var dep = base + f.depMs;
+      var arr = base + f.arrMs;
+      var total = arr - dep;
+      return {
+        dep: dep,
+        arr: arr,
+        t: total <= 0 ? 1 : Math.max(0, Math.min(1, (now - dep) / total)),
+        airborne: now >= dep && now < arr,
+      };
+    }
+
+    function airborneFlights(now) {
+      return DATA.flights.filter(function (f) {
+        return schedule(f, now).airborne;
+      });
+    }
+
     /* ─── Formato ───────────────────────────────────────────────────── */
 
     var nf = new Intl.NumberFormat('es-ES');
@@ -963,8 +1008,8 @@
       maximumFractionDigits: 0,
     });
 
-    function hhmm(iso) {
-      var d = new Date(iso);
+    function hhmm(ms) {
+      var d = new Date(ms);
       return (
         String(d.getUTCHours()).padStart(2, '0') + ':' + String(d.getUTCMinutes()).padStart(2, '0')
       );
@@ -1063,6 +1108,9 @@
 
     /* ─── Vuelos ────────────────────────────────────────────────────── */
 
+    /* Se crea un símbolo por vuelo del día y se muestra sólo mientras está
+     * en el aire. Crear y destruir nodos cada segundo sería más costoso que
+     * tener 360 escondidos. */
     var planes = DATA.flights.map(function (f) {
       var group = el('g', { class: 'plane-group' });
       var ring = el('circle', { r: 7, class: 'plane-ring', opacity: 0 });
@@ -1082,6 +1130,9 @@
 
       var track = el('path', { class: 'track' });
       gTracks.appendChild(track);
+
+      group.style.display = 'none';
+      track.style.display = 'none';
 
       return { f: f, group: group, body: body, ring: ring, tag: tag, track: track, pos: null };
     });
@@ -1264,7 +1315,11 @@
 
     /* ─── Selección ─────────────────────────────────────────────────── */
 
-    var selected = { kind: 'flight', id: planes.length > 0 ? planes[0].f.id : null };
+    var initialFlying = airborneFlights(Date.now());
+    var selected = {
+      kind: 'flight',
+      id: initialFlying.length > 0 ? initialFlying[0].id : null,
+    };
 
     function selectFlight(id) {
       selected = { kind: 'flight', id: id };
@@ -1289,22 +1344,24 @@
 
     /* ─── Bucle de posiciones ───────────────────────────────────────── */
 
-    function positionOf(f, now) {
-      var dep = Date.parse(f.departure);
-      var arr = Date.parse(f.arrival);
-      var total = arr - dep;
-      var t = total <= 0 ? 1 : Math.max(0, Math.min(1, (now - dep) / total));
-      var here = slerp(f.originLat, f.originLon, f.destLat, f.destLon, t);
+    function positionOf(f, t) {
+      var here = slerp(f.oLat, f.oLon, f.dLat, f.dLon, t);
       var pt = project(here.lon, here.lat);
-      var hdg = t >= 1 ? f.heading : bearing(here.lat, here.lon, f.destLat, f.destLon);
-      return { x: pt.x, y: pt.y, t: t, heading: hdg, lat: here.lat, lon: here.lon };
+      return {
+        x: pt.x,
+        y: pt.y,
+        t: t,
+        heading: bearing(here.lat, here.lon, f.dLat, f.dLon),
+        lat: here.lat,
+        lon: here.lon,
+      };
     }
 
-    function greatCirclePath(f, from, to) {
+    function greatCirclePath(f) {
       var steps = 24;
       var d = '';
       for (var i = 0; i <= steps; i++) {
-        var seg = slerp(f.originLat, f.originLon, f.destLat, f.destLon, from + ((to - from) * i) / steps);
+        var seg = slerp(f.oLat, f.oLon, f.dLat, f.dLon, i / steps);
         var pt = project(seg.lon, seg.lat);
         d += (i === 0 ? 'M' : 'L') + pt.x.toFixed(1) + ',' + pt.y.toFixed(1);
       }
@@ -1314,10 +1371,23 @@
     function render() {
       var now = Date.now();
       var inv = 1 / cam.k;
+      var flying = 0;
 
       planes.forEach(function (p) {
-        var pos = positionOf(p.f, now);
+        var when = schedule(p.f, now);
+
+        if (!when.airborne) {
+          p.group.style.display = 'none';
+          p.track.style.display = 'none';
+          p.pos = null;
+          return;
+        }
+
+        flying += 1;
+        var pos = positionOf(p.f, when.t);
         p.pos = pos;
+        p.group.style.display = '';
+        p.track.style.display = '';
         p.group.setAttribute(
           'transform',
           'translate(' + pos.x.toFixed(2) + ',' + pos.y.toFixed(2) + ') scale(' + inv + ') rotate(' + pos.heading.toFixed(1) + ')'
@@ -1328,9 +1398,11 @@
         var isOn = selected.kind === 'flight' && selected.id === p.f.id;
         p.ring.setAttribute('opacity', isOn ? '0.85' : '0');
         p.tag.style.display = isOn || cam.k >= 2.4 ? '' : 'none';
-        p.track.setAttribute('d', greatCirclePath(p.f, 0, 1));
+        if (p.track.getAttribute('d') === null) p.track.setAttribute('d', greatCirclePath(p.f));
         p.track.style.opacity = isOn ? '0.95' : '0.34';
       });
+
+      document.getElementById('t-air').textContent = String(flying);
 
       Object.keys(airportNodes).forEach(function (code) {
         var node = airportNodes[code];
@@ -1345,7 +1417,17 @@
     function renderTopbar() {
       document.getElementById('world-name').textContent =
         DATA.world.name + ' · ' + DATA.airports.length + ' aeropuertos';
-      document.getElementById('t-air').textContent = String(DATA.flights.length);
+
+      var day = new Date(DATA.dayStart).toLocaleDateString('es-ES', {
+        day: 'numeric',
+        month: 'short',
+        timeZone: 'UTC',
+      });
+      document.getElementById('replay-note').textContent = 'día simulado ' + day + ' · en bucle';
+      document.getElementById('replay-note').title =
+        'La página reproduce un día completo de la simulación sobre la hora actual. ' +
+        'Las plantillas de las compañías se repiten a diario, así que lo que se ve ' +
+        'a cada hora es lo que de verdad opera a esa hora.';
       document.getElementById('t-flights').textContent = nf.format(DATA.totals.flights);
       document.getElementById('t-pax').textContent = compact(DATA.totals.pax);
       document.getElementById('t-lf').textContent =
@@ -1423,9 +1505,11 @@
 
     function renderStrip() {
       var box = document.getElementById('strip');
+      var now = Date.now();
+      var flying = airborneFlights(now);
       box.textContent = '';
 
-      if (DATA.flights.length === 0) {
+      if (flying.length === 0) {
         var empty = document.createElement('div');
         empty.className = 'strip-row';
         empty.textContent = 'Sin tráfico en este instante';
@@ -1433,7 +1517,7 @@
         return;
       }
 
-      DATA.flights.forEach(function (f) {
+      flying.forEach(function (f) {
         var row = document.createElement('div');
         row.className =
           'strip-row' + (selected.kind === 'flight' && selected.id === f.id ? ' on' : '');
@@ -1447,8 +1531,7 @@
 
         var pr = document.createElement('span');
         pr.className = 'pr';
-        var p = planeById[f.id];
-        pr.textContent = Math.round((p && p.pos ? p.pos.t : f.progress) * 100) + '%';
+        pr.textContent = Math.round(schedule(f, now).t * 100) + '%';
 
         row.appendChild(cs);
         row.appendChild(leg);
@@ -1498,9 +1581,11 @@
       var f = DATA.flights.filter(function (x) { return x.id === selected.id; })[0];
       if (!f) return renderHelpPanel(host);
 
+      var now = Date.now();
+      var when = schedule(f, now);
+      var t = when.t;
       var p = planeById[f.id];
-      var t = p && p.pos ? p.pos.t : f.progress;
-      var remaining = Math.max(0, Math.round((Date.parse(f.arrival) - Date.now()) / 60000));
+      var remaining = Math.max(0, Math.round((when.arr - now) / 60000));
 
       var s = section('Vuelo seleccionado');
 
@@ -1534,7 +1619,7 @@
       fromCode.textContent = f.origin;
       var fromCity = document.createElement('div');
       fromCity.className = 'city';
-      fromCity.textContent = hhmm(f.departure);
+      fromCity.textContent = hhmm(when.dep);
       from.appendChild(fromCode);
       from.appendChild(fromCity);
 
@@ -1551,7 +1636,7 @@
       toCode.textContent = f.destination;
       var toCity = document.createElement('div');
       toCity.className = 'city';
-      toCity.textContent = hhmm(f.arrival);
+      toCity.textContent = hhmm(when.arr);
       to.appendChild(toCode);
       to.appendChild(toCity);
 
@@ -1567,8 +1652,8 @@
           ['Pasajeros', nf.format(f.pax) + ' / ' + nf.format(f.seats)],
           ['Ocupación', Math.round((f.pax / f.seats) * 100) + ' %'],
           ['Distancia', nf.format(f.distanceKm) + ' km'],
-          ['Altitud', nf.format(p && p.pos ? Math.round(altitudeAt(t, f.distanceKm)) : f.altitudeM) + ' m'],
-          ['Rumbo', Math.round(p && p.pos ? p.pos.heading : f.heading) + '°'],
+          ['Altitud', nf.format(Math.round(altitudeAt(t, f.distanceKm))) + ' m'],
+          ['Rumbo', Math.round(p && p.pos ? p.pos.heading : 0) + '°'],
           ['Restante', t >= 1 ? '—' : remaining + ' min'],
         ])
       );
@@ -1590,7 +1675,8 @@
         '—origen, destino, hora de salida y hora de llegada— y esta página ' +
         'interpola sobre el arco de círculo máximo contra el reloj. Por eso el ' +
         'símbolo se mueve sin pedir nada, y todos los jugadores lo ven en el ' +
-        'mismo sitio.';
+        'mismo sitio.<br><br>Esta vista previa reproduce un <b>día grabado</b> de ' +
+        'la simulación sobre la hora actual; no está conectada a la API en vivo.';
       note.appendChild(text);
       host.appendChild(note);
     }
@@ -1606,8 +1692,9 @@
       var a = DATA.airports.filter(function (x) { return x.iata === selected.id; })[0];
       if (!a) return renderHelpPanel(host);
 
-      var inbound = DATA.flights.filter(function (f) { return f.destination === a.iata; });
-      var outbound = DATA.flights.filter(function (f) { return f.origin === a.iata; });
+      var flying = airborneFlights(Date.now());
+      var inbound = flying.filter(function (f) { return f.destination === a.iata; });
+      var outbound = flying.filter(function (f) { return f.origin === a.iata; });
 
       var s = section('Aeropuerto');
 
