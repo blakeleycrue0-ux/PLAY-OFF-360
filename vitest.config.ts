@@ -18,6 +18,9 @@ export default defineConfig({
         new URL('./packages/domain/src/testing/fixtures.ts', import.meta.url),
       ),
       '@airline/domain': pkg('domain'),
+      '@airline/db/testing': fileURLToPath(
+        new URL('./packages/db/src/testing/index.ts', import.meta.url),
+      ),
       '@airline/db': pkg('db'),
       '@airline/simulation': pkg('simulation'),
     },
@@ -28,7 +31,7 @@ export default defineConfig({
         extends: true,
         test: {
           name: 'unit',
-          include: ['packages/{shared,config,domain}/**/*.test.ts'],
+          include: ['packages/{shared,config,domain}/**/*.test.ts', 'scripts/**/*.test.ts'],
           environment: 'node',
         },
       },

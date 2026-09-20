@@ -71,6 +71,9 @@ importers:
       '@airline/shared':
         specifier: workspace:*
         version: link:../../packages/shared
+      '@airline/simulation':
+        specifier: workspace:*
+        version: link:../../packages/simulation
       fastify:
         specifier: ^5.2.0
         version: 5.12.5
@@ -92,6 +95,9 @@ importers:
       '@airline/shared':
         specifier: workspace:*
         version: link:../../packages/shared
+      '@airline/simulation':
+        specifier: workspace:*
+        version: link:../../packages/simulation
 
   packages/config:
     dependencies:

@@ -1,7 +1,30 @@
 {
   "extends": "../../tsconfig.base.json",
-  "compilerOptions": { "rootDir": "src", "outDir": "dist" },
-  "include": ["src/**/*"],
-  "exclude": ["**/*.test.ts"],
-  "references": [{"path":"../../packages/shared"},{"path":"../../packages/config"},{"path":"../../packages/domain"},{"path":"../../packages/db"}]
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist"
+  },
+  "include": [
+    "src/**/*"
+  ],
+  "exclude": [
+    "**/*.test.ts"
+  ],
+  "references": [
+    {
+      "path": "../../packages/shared"
+    },
+    {
+      "path": "../../packages/config"
+    },
+    {
+      "path": "../../packages/domain"
+    },
+    {
+      "path": "../../packages/db"
+    },
+    {
+      "path": "../../packages/simulation"
+    }
+  ]
 }

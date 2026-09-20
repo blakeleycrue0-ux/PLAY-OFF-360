@@ -43,6 +43,8 @@ export default tseslint.config(
       'data/**',
       'apps/web/**',
       'apps/mobile/**',
+      // La propia configuración no forma parte del proyecto de TypeScript.
+      'eslint.config.js',
     ],
   },
   js.configs.recommended,
@@ -113,8 +115,15 @@ export default tseslint.config(
   },
   {
     // Las CLI y los scripts sí escriben por consola: es su interfaz.
-    files: ['**/cli/**/*.ts', 'scripts/**/*.ts', 'apps/*/src/main.ts'],
-    rules: { 'no-console': 'off', 'max-lines-per-function': 'off' },
+    files: ['**/cli/**/*.ts', 'scripts/**/*.ts', 'apps/*/src/main.ts', 'apps/worker/src/logger.ts'],
+    rules: {
+      'no-console': 'off',
+      'max-lines-per-function': 'off',
+      // Una herramienta de línea de comandos mide tiempo real y sella fechas de
+      // descarga: ahí el reloj del sistema es lo correcto, no una fuga del
+      // dominio.
+      'no-restricted-syntax': 'off',
+    },
   },
   {
     // Frontera de datos: aquí es donde las filas del driver, que no tienen tipo,

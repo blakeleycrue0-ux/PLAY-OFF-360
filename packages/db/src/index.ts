@@ -1,5 +1,10 @@
 export { type DatabaseConfig, databaseConfigFromEnv } from './config.js';
 export {
+  type LoadedAirports,
+  loadAirportDataset,
+  loadAircraftTypeDataset,
+} from './seed/load-dataset.js';
+export {
   type Pool,
   type PoolClient,
   type Queryable,
@@ -43,6 +48,12 @@ export {
   FLIGHT_EVENT_KINDS,
 } from './repositories/flight-events.js';
 export { type MarketOffer, findMarketOffers } from './repositories/market.js';
+export {
+  type AirlineSummary,
+  type WorldTotals,
+  airlineSummaries,
+  worldTotals,
+} from './repositories/analytics.js';
 
 export {
   LEDGER_CATEGORIES,

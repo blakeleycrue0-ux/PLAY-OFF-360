@@ -277,6 +277,12 @@ export const PARAMETER_PROVENANCE: Readonly<Record<string, ParameterProvenance>>
   ),
 
   'reputation.initial': d('docs/02 §2.3', 'airlines.reputation por defecto 50.'),
+  'reputation.onTimeSmoothing': prov(
+    'Peso del último vuelo en la media móvil de puntualidad. docs/04 §4.8 pide que la reputación se mueva despacio, sin dar constantes.',
+  ),
+  'reputation.smoothing': prov(
+    'Velocidad a la que la reputación persigue a la puntualidad. La Fase 1 sólo implementa el término de puntualidad de docs/04 §4.8; faltan ocupación, servicio, cancelaciones, incidentes y edad de flota.',
+  ),
   'reputation.min': d('docs/02 §2.3', 'Rango 0..100.'),
   'reputation.max': d('docs/02 §2.3', 'Rango 0..100.'),
 };

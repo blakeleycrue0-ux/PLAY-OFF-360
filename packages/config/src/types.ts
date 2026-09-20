@@ -134,5 +134,9 @@ export interface BalanceConfig {
     readonly initial: number;
     readonly min: number;
     readonly max: number;
+    /** Peso del último vuelo en la media móvil de puntualidad. */
+    readonly onTimeSmoothing: number;
+    /** Velocidad a la que la reputación persigue a la puntualidad. */
+    readonly smoothing: number;
   };
 }

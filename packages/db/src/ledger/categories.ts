@@ -38,7 +38,7 @@ export const idempotencyKey = {
     `flight:${flightId}:${category}`,
   flightRevenue: (flightId: string, category: LedgerCategory): string =>
     `flight:${flightId}:${category}`,
-  lease: (aircraftId: string, monthKey: string): string => `lease:${aircraftId}:${monthKey}`,
+  lease: (aircraftId: string, dayKey: string): string => `lease:${aircraftId}:${dayKey}`,
   overhead: (aircraftId: string, dayKey: string): string => `overhead:${aircraftId}:${dayKey}`,
   aircraftPurchase: (aircraftId: string): string => `aircraft:${aircraftId}:purchase`,
   foundingCapital: (airlineId: string): string => `airline:${airlineId}:founding_capital`,

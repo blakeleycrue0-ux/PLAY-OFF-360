@@ -113,7 +113,13 @@ export const balanceSchema = z
       technicalMaxMinutes: nonNegative,
       onTimeThresholdMinutes: positive,
     }),
-    reputation: z.object({ initial: z.number(), min: z.number(), max: z.number() }),
+    reputation: z.object({
+      initial: z.number(),
+      min: z.number(),
+      max: z.number(),
+      onTimeSmoothing: unitInterval,
+      smoothing: unitInterval,
+    }),
   })
   .superRefine((cfg, ctx) => {
     const shareTotal =

@@ -155,5 +155,7 @@ export const DEFAULT_BALANCE: BalanceConfig = {
     initial: 50,
     min: 0,
     max: 100,
+    onTimeSmoothing: 0.02,
+    smoothing: 0.004,
   },
 };
