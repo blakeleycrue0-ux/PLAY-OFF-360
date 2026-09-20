@@ -37,6 +37,7 @@ export default tseslint.config(
   {
     ignores: [
       '**/dist/**',
+      '.tsbuild/**',
       '**/node_modules/**',
       '**/*.tsbuildinfo',
       'coverage/**',
@@ -118,7 +119,16 @@ export default tseslint.config(
   },
   {
     // Las CLI y los scripts sí escriben por consola: es su interfaz.
-    files: ['**/cli/**/*.ts', 'scripts/**/*.ts', 'apps/*/src/main.ts', 'apps/worker/src/logger.ts'],
+    files: [
+      '**/cli/**/*.ts',
+      'scripts/**/*.ts',
+      'scripts/**/*.mjs',
+      'apps/*/src/main.ts',
+      'apps/worker/src/logger.ts',
+    ],
+    // Escribir por consola y leer process es el trabajo de una herramienta de
+    // línea de comandos, no una fuga.
+    languageOptions: { globals: { console: 'readonly', process: 'readonly' } },
     rules: {
       'no-console': 'off',
       'max-lines-per-function': 'off',
