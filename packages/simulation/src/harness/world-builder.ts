@@ -42,6 +42,7 @@ import {
   chooseAircraftType,
   pairKey,
   rankRouteCandidates,
+  type RouteCandidate,
 } from '../npc/planner.js';
 
 /** Capital inicial de una aerolínea (docs: 50.000.000 €). */
@@ -160,9 +161,7 @@ async function buildAirline(
     id: toAirlineId(randomUUID()),
     worldId: world.id,
     accountId: null,
-    name: `${policy.strategy.replace(/_/g, ' ')} ${hub.city}`.replace(/\b\w/g, (c) =>
-      c.toUpperCase(),
-    ),
+    name: airlineName(hub, policy),
     iataCode: codeFor(index, 2),
     icaoCode: codeFor(index, 3),
     country: hub.country,
@@ -209,6 +208,21 @@ async function buildAirline(
     config,
   ).filter((candidate) => candidate.expectedProfitPerFlight > 0);
 
+  return buildFleet({ ...input, airline, candidates, referenceType });
+}
+
+interface BuildFleetInput extends BuildAirlineInput {
+  readonly airline: Airline;
+  readonly candidates: readonly RouteCandidate[];
+  readonly referenceType: AircraftType;
+}
+
+/** Compra la flota, abre sus rutas y programa sus rotaciones. */
+async function buildFleet(
+  input: BuildFleetInput,
+): Promise<{ airline: Airline; aircraft: number; routes: number; schedules: number }> {
+  const { tx, world, config, policy, index, airline, candidates, referenceType } = input;
+
   const fleetSize = policy.targetFleetSize;
   const pairsPerAircraft = policy.networkAmbition >= 1.2 ? 2 : 1;
   const wanted = Math.min(candidates.length, fleetSize * pairsPerAircraft);
@@ -235,7 +249,7 @@ async function buildAirline(
     );
     aircraftBuilt += 1;
 
-    const rotation = buildRotation(assigned, type, policy, config);
+    const rotation = buildRotation(assigned, type, policy, config, index * 7 + i);
 
     for (const leg of rotation) {
       const created = await createRouteAndSchedule(tx, {
@@ -266,6 +280,12 @@ interface RotationLeg {
   readonly departureMinute: Minutes;
 }
 
+const ROTATION_START_HOUR = 6;
+const ROTATION_LAST_HOUR = 22;
+/** Franjas de arranque distintas para escalonar la flota a lo largo del día. */
+const ROTATION_SLOTS = 6;
+const ROTATION_SLOT_HOURS = 2;
+
 /**
  * Encadena ida y vuelta de cada destino asignado a un avión.
  *
@@ -283,15 +303,21 @@ function buildRotation(
   type: AircraftType,
   policy: NpcPolicy,
   config: BalanceConfig,
+  aircraftIndex: number,
 ): readonly RotationLeg[] {
   const legs: RotationLeg[] = [];
-  let cursor = 6 * 60; // primera salida a las 06:00 UTC
+
+  // Una flota no despega entera al amanecer. Cada avión arranca su rotación en
+  // una franja distinta, de modo que la operación cubre el día completo en vez
+  // de agotarse a media tarde. De paso reparte la presión sobre los
+  // aeropuertos, que es lo que hará falta cuando existan los slots.
+  let cursor = (ROTATION_START_HOUR + (aircraftIndex % ROTATION_SLOTS) * ROTATION_SLOT_HOURS) * 60;
 
   for (const candidate of assigned) {
     const block = calculateFlightDuration(candidate.distanceKm, type, config);
     const turnaround = type.turnaroundMinutes + policy.rotationBufferMinutes;
 
-    if (cursor + (block + turnaround) * 2 > 23 * 60) break;
+    if (cursor + (block + turnaround) * 2 > ROTATION_LAST_HOUR * 60) break;
 
     legs.push({
       origin: candidate.origin,
@@ -401,6 +427,37 @@ async function createRouteAndSchedule(
 function daysFor(weeklyFrequency: number): readonly number[] {
   const all = [1, 2, 3, 4, 5, 6, 0];
   return all.slice(0, Math.max(1, Math.min(7, weeklyFrequency)));
+}
+
+/**
+ * Sufijo comercial por estrategia. Una compañía de bajo coste no se llama igual
+ * que una de red, y el nombre es lo primero que ve el jugador en el ranking.
+ */
+const NAME_SUFFIX: Readonly<Record<NpcPolicy['strategy'], string>> = {
+  lowcost: 'Express',
+  premium: 'Airways',
+  regional: 'Connect',
+  hub_and_spoke: 'Lines',
+  point_to_point: 'Air',
+  conservative: 'Aviation',
+  aggressive: 'Jet',
+};
+
+/**
+ * Nombre comercial a partir de la ciudad del hub.
+ *
+ * El municipio que trae la fuente puede ser largo o compuesto
+ * ("Colombier-Saugnieu, Rhône", "Frankfurt am Main"): se queda con la primera
+ * parte legible para que el nombre quepa en una línea de tabla.
+ */
+function airlineName(hub: Airport, policy: NpcPolicy): string {
+  const city = (hub.city || hub.name)
+    .split(/[,(/]/)[0]
+    ?.split(/\s+(?:am|an|de|del|sur|upon)\s+/i)[0]
+    ?.trim();
+
+  const base = city === undefined || city.length === 0 ? hub.iata : city;
+  return `${base} ${NAME_SUFFIX[policy.strategy]}`;
 }
 
 const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';

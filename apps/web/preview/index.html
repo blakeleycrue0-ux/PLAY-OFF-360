@@ -1,0 +1,1725 @@
+<title>Airline World</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link
+  rel="stylesheet"
+  href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@400;500;600&family=Barlow:wght@400;500&family=IBM+Plex+Mono:wght@400;500;600&display=swap"
+/>
+
+<style>
+  /*
+   * Consola de operaciones de una aerolínea.
+   *
+   * El diseño se compromete con un único mundo visual: una sala de control de
+   * noche. Fondo casi negro, tierra apenas insinuada, y un solo acento ámbar
+   * reservado a lo que está vivo —los aviones en el aire—. Todo lo demás es
+   * gris frío para que el ámbar signifique algo.
+   */
+  :root {
+    --void: #08090b;
+    --panel: #0e1116;
+    --panel-raised: #12161c;
+    --land: #161a21;
+    --land-edge: #232932;
+    --hairline: #1e242d;
+    --hairline-strong: #2b323d;
+
+    --ink: #e7e9ec;
+    --ink-dim: #8a93a2;
+    --ink-faint: #59616f;
+
+    --signal: #e8b23a;
+    --signal-dim: #8a6b24;
+    --gain: #4fae84;
+    --loss: #d4614f;
+    --route: #222c3a;
+
+    --mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+    --ui: 'Barlow Semi Condensed', 'Barlow', system-ui, sans-serif;
+    --body: 'Barlow', system-ui, sans-serif;
+
+    color-scheme: dark;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  html,
+  body {
+    height: 100%;
+  }
+
+  body {
+    margin: 0;
+    background: var(--void);
+    color: var(--ink);
+    font-family: var(--body);
+    font-size: 14px;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .shell {
+    display: grid;
+    grid-template-rows: auto 1fr;
+    height: 100%;
+    min-height: 100%;
+  }
+
+  /* ─── Barra superior ─────────────────────────────────────────────── */
+
+  .topbar {
+    display: flex;
+    align-items: center;
+    gap: 22px;
+    padding: 0 16px;
+    height: 52px;
+    border-bottom: 1px solid var(--hairline);
+    background: var(--panel);
+    flex-wrap: wrap;
+  }
+
+  .brand {
+    display: flex;
+    align-items: baseline;
+    gap: 9px;
+    margin-right: auto;
+  }
+
+  .brand b {
+    font-family: var(--ui);
+    font-weight: 600;
+    font-size: 16px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+
+  .brand span {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--ink-faint);
+    letter-spacing: 0.06em;
+  }
+
+  .stat {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 62px;
+  }
+
+  .stat .k {
+    font-family: var(--ui);
+    font-size: 10px;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+
+  .stat .v {
+    font-family: var(--mono);
+    font-size: 15px;
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .stat .v.live {
+    color: var(--signal);
+  }
+
+  .clock {
+    font-family: var(--mono);
+    font-size: 15px;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.04em;
+  }
+
+  .clock::after {
+    content: ' UTC';
+    font-size: 10px;
+    color: var(--ink-faint);
+    letter-spacing: 0.1em;
+  }
+
+  /* ─── Rejilla principal ──────────────────────────────────────────── */
+
+  .main {
+    display: grid;
+    grid-template-columns: 236px 1fr 296px;
+    min-height: 0;
+  }
+
+  .rail,
+  .inspector {
+    border-color: var(--hairline);
+    background: var(--panel);
+    overflow-y: auto;
+    min-height: 0;
+  }
+
+  .rail {
+    border-right: 1px solid var(--hairline);
+  }
+
+  .inspector {
+    border-left: 1px solid var(--hairline);
+  }
+
+  .section {
+    border-bottom: 1px solid var(--hairline);
+    padding: 14px 14px 16px;
+  }
+
+  .section h2 {
+    margin: 0 0 12px;
+    font-family: var(--ui);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+
+  /* ─── Identidad de la aerolínea ──────────────────────────────────── */
+
+  .carrier {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+
+  .tail {
+    width: 38px;
+    height: 38px;
+    flex: none;
+    border-radius: 3px;
+    display: grid;
+    place-items: center;
+    font-family: var(--ui);
+    font-weight: 600;
+    font-size: 13px;
+    letter-spacing: 0.06em;
+    color: var(--void);
+    background: var(--signal);
+  }
+
+  .carrier-name {
+    font-family: var(--ui);
+    font-size: 15px;
+    font-weight: 500;
+    line-height: 1.15;
+  }
+
+  .carrier-sub {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    color: var(--ink-faint);
+    letter-spacing: 0.05em;
+    margin-top: 2px;
+  }
+
+  .kpis {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1px;
+    background: var(--hairline);
+    border: 1px solid var(--hairline);
+    margin-top: 14px;
+  }
+
+  .kpi {
+    background: var(--panel);
+    padding: 9px 10px;
+  }
+
+  .kpi .k {
+    font-family: var(--ui);
+    font-size: 9.5px;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+
+  .kpi .v {
+    font-family: var(--mono);
+    font-size: 16px;
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+    margin-top: 2px;
+  }
+
+  .kpi .v small {
+    font-size: 10px;
+    color: var(--ink-faint);
+    margin-left: 2px;
+  }
+
+  .gain {
+    color: var(--gain);
+  }
+
+  .loss {
+    color: var(--loss);
+  }
+
+  /* ─── Tabla de clasificación ─────────────────────────────────────── */
+
+  .board {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: var(--mono);
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .board th {
+    font-family: var(--ui);
+    font-size: 9.5px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    text-align: right;
+    padding: 0 0 7px;
+  }
+
+  .board {
+    table-layout: fixed;
+  }
+
+  .board th:first-child,
+  .board td:first-child {
+    text-align: left;
+    /* Una fila por compañía: un nombre largo se recorta, no parte la tabla. */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .board th:nth-child(2),
+  .board td:nth-child(2) {
+    width: 42px;
+  }
+
+  .board th:nth-child(3),
+  .board td:nth-child(3) {
+    width: 58px;
+  }
+
+  .board td {
+    padding: 5px 0;
+    text-align: right;
+    border-top: 1px solid var(--hairline);
+    color: var(--ink-dim);
+  }
+
+  .board tbody tr {
+    cursor: pointer;
+  }
+
+  .board tbody tr:hover td {
+    color: var(--ink);
+    background: var(--panel-raised);
+  }
+
+  .board tr.on td {
+    color: var(--ink);
+  }
+
+  .board tr.on td:first-child {
+    box-shadow: inset 2px 0 0 var(--signal);
+  }
+
+  .board .hub {
+    color: var(--ink-faint);
+    padding-left: 6px;
+  }
+
+  /* ─── Mapa ───────────────────────────────────────────────────────── */
+
+  .stage {
+    position: relative;
+    min-height: 0;
+    background: var(--void);
+    overflow: hidden;
+  }
+
+  #map {
+    display: block;
+    width: 100%;
+    height: 100%;
+    cursor: grab;
+    touch-action: none;
+  }
+
+  #map.dragging {
+    cursor: grabbing;
+  }
+
+  .land {
+    fill: var(--land);
+    stroke: none;
+  }
+
+  .border {
+    fill: none;
+    stroke: var(--land-edge);
+    stroke-width: 0.7;
+    vector-effect: non-scaling-stroke;
+  }
+
+  /*
+   * 800 rutas dibujadas con el mismo peso son ruido, no información. La red
+   * entera queda como textura de fondo y sólo se levanta la de la compañía
+   * que se está mirando.
+   */
+  .route {
+    fill: none;
+    stroke: var(--route);
+    stroke-width: 0.6;
+    opacity: 0.5;
+    vector-effect: non-scaling-stroke;
+  }
+
+  .route.mine {
+    stroke: var(--ink-faint);
+    opacity: 0.9;
+  }
+
+  .apt {
+    fill: var(--ink-faint);
+  }
+
+  .apt.major {
+    fill: var(--ink-dim);
+  }
+
+  .apt-hit {
+    fill: transparent;
+    cursor: pointer;
+  }
+
+  .apt-label {
+    font-family: var(--mono);
+    font-size: 9px;
+    font-weight: 500;
+    fill: var(--ink-dim);
+    letter-spacing: 0.04em;
+    pointer-events: none;
+  }
+
+  .track {
+    fill: none;
+    stroke: var(--signal-dim);
+    stroke-width: 1;
+    stroke-dasharray: 3 4;
+    vector-effect: non-scaling-stroke;
+  }
+
+  .plane {
+    fill: var(--signal);
+    cursor: pointer;
+  }
+
+  .plane-ring {
+    fill: none;
+    stroke: var(--signal);
+    stroke-width: 1;
+    vector-effect: non-scaling-stroke;
+    opacity: 0.55;
+  }
+
+  .plane-tag {
+    font-family: var(--mono);
+    font-size: 9.5px;
+    font-weight: 500;
+    fill: var(--signal);
+    letter-spacing: 0.04em;
+    pointer-events: none;
+  }
+
+  /* ─── Controles flotantes sobre el mapa ──────────────────────────── */
+
+  .overlay {
+    position: absolute;
+    display: flex;
+    gap: 6px;
+    z-index: 2;
+  }
+
+  .overlay.tl {
+    top: 12px;
+    left: 12px;
+  }
+
+  .overlay.bl {
+    bottom: 12px;
+    left: 12px;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .overlay.br {
+    bottom: 12px;
+    right: 12px;
+    flex-direction: column;
+  }
+
+  .chip {
+    font-family: var(--ui);
+    font-size: 10.5px;
+    font-weight: 500;
+    letter-spacing: 0.11em;
+    text-transform: uppercase;
+    color: var(--ink-dim);
+    background: color-mix(in srgb, var(--panel) 88%, transparent);
+    border: 1px solid var(--hairline-strong);
+    padding: 6px 10px;
+    cursor: pointer;
+    border-radius: 2px;
+  }
+
+  .chip:hover {
+    color: var(--ink);
+    border-color: var(--ink-faint);
+  }
+
+  .chip[aria-pressed='true'] {
+    color: var(--void);
+    background: var(--ink-dim);
+    border-color: var(--ink-dim);
+  }
+
+  .chip.square {
+    width: 30px;
+    padding: 6px 0;
+    text-align: center;
+    font-family: var(--mono);
+    font-size: 14px;
+    letter-spacing: 0;
+  }
+
+  .scalebar {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--ink-faint);
+    background: color-mix(in srgb, var(--panel) 88%, transparent);
+    border: 1px solid var(--hairline);
+    padding: 4px 8px;
+    letter-spacing: 0.05em;
+  }
+
+  /* ─── Tira de vuelos en el aire ──────────────────────────────────── */
+
+  .strip {
+    background: color-mix(in srgb, var(--panel) 94%, transparent);
+    border: 1px solid var(--hairline-strong);
+    max-height: 178px;
+    overflow-y: auto;
+    min-width: 268px;
+  }
+
+  .strip h3 {
+    margin: 0;
+    padding: 8px 11px 7px;
+    font-family: var(--ui);
+    font-size: 9.5px;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    border-bottom: 1px solid var(--hairline);
+    position: sticky;
+    top: 0;
+    background: var(--panel);
+  }
+
+  .strip-row {
+    display: grid;
+    grid-template-columns: 62px 1fr auto;
+    gap: 9px;
+    align-items: center;
+    padding: 6px 11px;
+    border-bottom: 1px solid var(--hairline);
+    cursor: pointer;
+    font-family: var(--mono);
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+    color: var(--ink-dim);
+  }
+
+  .strip-row:last-child {
+    border-bottom: 0;
+  }
+
+  .strip-row:hover,
+  .strip-row.on {
+    background: var(--panel-raised);
+    color: var(--ink);
+  }
+
+  .strip-row.on {
+    box-shadow: inset 2px 0 0 var(--signal);
+  }
+
+  .strip-row .cs {
+    color: var(--signal);
+    font-weight: 500;
+  }
+
+  .strip-row .pr {
+    color: var(--ink-faint);
+    font-size: 10px;
+  }
+
+  /* ─── Inspector ──────────────────────────────────────────────────── */
+
+  .leg {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 10px;
+    margin: 4px 0 12px;
+  }
+
+  .leg .code {
+    font-family: var(--mono);
+    font-size: 26px;
+    font-weight: 500;
+    letter-spacing: 0.01em;
+  }
+
+  .leg .wire {
+    height: 1px;
+    background: linear-gradient(to right, var(--hairline-strong), var(--signal-dim));
+    position: relative;
+  }
+
+  .leg .wire i {
+    position: absolute;
+    top: -3px;
+    width: 7px;
+    height: 7px;
+    background: var(--signal);
+    transform: translateX(-50%) rotate(45deg);
+  }
+
+  .leg .city {
+    font-family: var(--ui);
+    font-size: 10.5px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin-top: 1px;
+  }
+
+  .rows {
+    display: grid;
+    gap: 1px;
+    background: var(--hairline);
+    border-top: 1px solid var(--hairline);
+    border-bottom: 1px solid var(--hairline);
+  }
+
+  .row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 12px;
+    background: var(--panel);
+    padding: 7px 0;
+  }
+
+  .row dt {
+    font-family: var(--ui);
+    font-size: 10.5px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+
+  .row dd {
+    margin: 0;
+    font-family: var(--mono);
+    font-size: 12.5px;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+  }
+
+  .meter {
+    height: 3px;
+    background: var(--hairline);
+    margin-top: 9px;
+    overflow: hidden;
+  }
+
+  .meter i {
+    display: block;
+    height: 100%;
+    background: var(--signal);
+  }
+
+  .meter.calm i {
+    background: var(--ink-dim);
+  }
+
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-family: var(--ui);
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--signal);
+    border: 1px solid var(--signal-dim);
+    padding: 2px 7px;
+    border-radius: 2px;
+  }
+
+  .pill::before {
+    content: '';
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--signal);
+    animation: pulse 2.4s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.25;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .pill::before {
+      animation: none;
+    }
+  }
+
+  .note {
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--ink-faint);
+  }
+
+  .note b {
+    color: var(--ink-dim);
+    font-weight: 500;
+  }
+
+  .legend {
+    display: grid;
+    gap: 6px;
+    font-family: var(--mono);
+    font-size: 10.5px;
+    color: var(--ink-faint);
+  }
+
+  .legend div {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .legend i {
+    width: 10px;
+    height: 10px;
+    flex: none;
+    display: inline-block;
+  }
+
+  /* ─── Adaptación a pantallas estrechas ───────────────────────────── */
+
+  @media (max-width: 1100px) {
+    .main {
+      grid-template-columns: 210px 1fr;
+    }
+
+    .inspector {
+      grid-column: 1 / -1;
+      border-left: 0;
+      border-top: 1px solid var(--hairline);
+    }
+  }
+
+  @media (max-width: 760px) {
+    .shell {
+      height: auto;
+      min-height: 100%;
+    }
+
+    .main {
+      grid-template-columns: 1fr;
+    }
+
+    .stage {
+      height: 62vh;
+      min-height: 340px;
+      border-bottom: 1px solid var(--hairline);
+    }
+
+    .rail {
+      border-right: 0;
+      border-bottom: 1px solid var(--hairline);
+      order: 2;
+    }
+
+    .inspector {
+      order: 3;
+    }
+
+    .topbar {
+      height: auto;
+      padding-block: 10px;
+      gap: 16px;
+    }
+
+    .overlay.bl .strip {
+      max-height: 128px;
+      min-width: 232px;
+    }
+  }
+</style>
+
+<div class="shell">
+  <header class="topbar">
+    <div class="brand">
+      <b>Airline&nbsp;World</b>
+      <span id="world-name"></span>
+    </div>
+    <div class="stat">
+      <span class="k">En el aire</span><span class="v live" id="t-air">0</span>
+    </div>
+    <div class="stat"><span class="k">Vuelos hoy</span><span class="v" id="t-flights">0</span></div>
+    <div class="stat"><span class="k">Pasajeros</span><span class="v" id="t-pax">0</span></div>
+    <div class="stat"><span class="k">Ocupación</span><span class="v" id="t-lf">0%</span></div>
+    <div class="stat"><span class="k">Puntualidad</span><span class="v" id="t-otp">0%</span></div>
+    <div class="stat"><span class="k">Queroseno</span><span class="v" id="t-fuel">0</span></div>
+    <div class="clock" id="clock">--:--:--</div>
+  </header>
+
+  <div class="main">
+    <aside class="rail">
+      <div class="section">
+        <h2>Compañía</h2>
+        <div class="carrier">
+          <div class="tail" id="c-tail">--</div>
+          <div>
+            <div class="carrier-name" id="c-name">—</div>
+            <div class="carrier-sub" id="c-sub">—</div>
+          </div>
+        </div>
+        <div class="kpis">
+          <div class="kpi"><div class="k">Flota</div><div class="v" id="c-fleet">0</div></div>
+          <div class="kpi"><div class="k">Rutas</div><div class="v" id="c-routes">0</div></div>
+          <div class="kpi"><div class="k">Ocupación</div><div class="v" id="c-lf">0<small>%</small></div></div>
+          <div class="kpi"><div class="k">Puntualidad</div><div class="v" id="c-otp">0<small>%</small></div></div>
+          <div class="kpi"><div class="k">Pasajeros</div><div class="v" id="c-pax">0</div></div>
+          <div class="kpi"><div class="k">Resultado</div><div class="v" id="c-result">0</div></div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Clasificación por resultado</h2>
+        <table class="board">
+          <thead>
+            <tr>
+              <th>Compañía</th>
+              <th>Ocup.</th>
+              <th>Result.</th>
+            </tr>
+          </thead>
+          <tbody id="board"></tbody>
+        </table>
+      </div>
+
+      <div class="section">
+        <h2>Leyenda</h2>
+        <div class="legend">
+          <div><i style="background: var(--signal)"></i> Avión en vuelo</div>
+          <div><i style="background: var(--ink-dim); border-radius: 50%"></i> Aeropuerto</div>
+          <div><i style="background: var(--ink-faint)"></i> Red de la compañía</div>
+          <div><i style="background: var(--route)"></i> Resto del mundo</div>
+        </div>
+      </div>
+    </aside>
+
+    <section class="stage">
+      <div class="overlay tl">
+        <button class="chip" id="l-routes" aria-pressed="true" type="button">Rutas</button>
+        <button class="chip" id="l-labels" aria-pressed="true" type="button">Códigos</button>
+        <button class="chip" id="l-tracks" aria-pressed="true" type="button">Trayectos</button>
+      </div>
+
+      <div class="overlay br">
+        <button class="chip square" id="z-in" type="button" aria-label="Acercar">+</button>
+        <button class="chip square" id="z-out" type="button" aria-label="Alejar">−</button>
+        <button class="chip square" id="z-reset" type="button" aria-label="Encuadre inicial">⤾</button>
+      </div>
+
+      <div class="overlay bl">
+        <div class="strip">
+          <h3>En el aire ahora</h3>
+          <div id="strip"></div>
+        </div>
+        <div class="scalebar" id="scalebar">—</div>
+      </div>
+
+      <svg id="map" role="img" aria-label="Mapa de operaciones en Europa"></svg>
+    </section>
+
+    <aside class="inspector" id="inspector"></aside>
+  </div>
+</div>
+
+<script id="snapshot" type="application/json">
+  {"generatedAt":"2026-09-20T20:24:33.676Z","projection":{"scale":1175.2980412939964,"translateX":656.4102564102565,"translateY":2101.09443166917,"width":1600,"height":1548},"world":{"id":"c29557f3-4911-4206-81d5-4887bf7b8d38","name":"Simulación 20260601","startedAt":"2026-09-20T00:00:00.000Z","fuelPriceEurPerKg":0.92},"totals":{"flights":860,"landed":353,"cancelled":0,"pax":54902,"loadFactor":0.9026667981980204,"onTimePercent":98.58356940509914},"map":{"view":{"width":1600,"height":1548},"land":"M1365.7,1316.9L1351.8,1327.6L1353.3,1332.4L1353.9,1334.4L1332.9,1344.5L1322.8,1341.3L1318.1,1331.2L1327.9,1330.3L1329.3,1330.2L1332.2,1324.1L1347,1324.4ZM1142.6,1316.1L1153.8,1324.6L1169.8,1323.1L1185,1324.9L1184.5,1329.3L1195.7,1326.3L1193.1,1333.7L1163.6,1335.8L1163.8,1331.7L1138.7,1326.8ZM974.8,1251.2L967.4,1271.7L970.4,1279.7L966.2,1292.8L950.4,1283.2L940,1280.4L911.4,1267.3L914.2,1253.9L938.2,1256.3L959.2,1253.5ZM845.3,1171.8L857.6,1191L854.7,1226.4L845.4,1224.7L837.1,1233.5L829.3,1226.5L828.5,1194.3L823.8,1178.8L835.1,1180.2ZM852.5,1145.9L845.7,1167.1L836.4,1161.5L831.7,1143L835.8,1132.7L849,1122ZM517.2,839.3L480.8,859L451.7,854L468.4,819L457.7,784L485.6,756.5L501.1,739.8L518.3,738.3L540.3,760.3L529.3,784.5L532.7,809.1ZM916.7,722.6L904.4,751.6L882.9,731.4L880.1,716.3L910.2,704.2ZM594.8,608.2L572.9,650.2L593.8,644.9L616.2,645.1L610.9,676L592.4,709.3L613.6,711.6L633.6,757.9L647.6,763.6L660.2,803.2L666,816.7L690.9,823.2L688.4,844.7L677.9,854.5L686.1,871.5L667.7,888.6L640.3,888.3L605.3,897.2L595.7,890.9L582.2,905.9L563.3,902.3L548.9,914.5L537.9,908.1L568,874.1L586.4,867.1L554.2,861.5L548.3,848.3L569.8,838L558.6,819.8L562.4,797.3L593,800.5L596,780.4L581.9,758.3L557,752L552.2,742.3L559.6,726.2L552.8,716.2L541.8,733.3L540.6,698.2L530.2,679.2L537.7,640L553.7,608.3L570,611.5ZM358.8,257.9L354,290.7L377.2,324.4L350.6,361.1L320.6,376.9L291.4,393.2L273.7,401.5L246.7,394.8L218.3,387.1L189.5,380.1L209.7,359.2L165,335.8L201.3,326.5L200.4,312L157.4,300.6L171.3,267.8L202.4,260.3L234.3,294.5L265.5,267.1L291.3,281.4L324.7,254.3ZM1660,1234.8L1658.6,1235.9L1659.1,1248.9L1660,1251.4L1660,1448.4L1660,1448.4L1652.7,1457.2L1640.5,1456.1L1644.8,1466.5L1643,1471.9L1649.5,1489.5L1657.6,1509.6L1660,1510.9L1660,1608L1449.5,1608L1446,1600.7L1436.4,1592L1425.3,1587.3L1418.5,1574.4L1419.7,1569.3L1414,1557.5L1408,1552.4L1400,1535.4L1387.5,1516.9L1377,1500.9L1366.8,1501.1L1370,1488.2L1370.9,1480.1L1373.4,1470.7L1372.8,1467.3L1367,1476.7L1362.6,1494.4L1357,1506.5L1352.2,1510.6L1345.4,1503.1L1336.1,1492.7L1321.5,1459L1319.4,1461.2L1327.9,1486L1340.5,1509.4L1356,1545.2L1363.5,1557.6L1370.2,1570.4L1388.6,1595.4L1384.5,1599.3L1384.9,1608L324.9,1608L324.9,1608L328.6,1599.9L340,1585.6L346.9,1582L352.3,1568.9L352.8,1556.7L360.2,1542.7L373.8,1534.3L386.9,1510.8L397.5,1501.5L416.7,1498.9L432.8,1483L443.1,1476.7L460.2,1457.1L455.1,1427.4L462.9,1406.7L465.6,1393.9L478.8,1377.4L499.4,1366.2L514.6,1356L528.3,1330.1L534.7,1314.7L549.9,1314.8L562.2,1325.5L581.7,1323.8L603,1329.3L611.9,1329.6L631.6,1315.8L653.8,1311.5L666.7,1301L686.5,1293.2L721.3,1288.7L755.2,1286.6L765.5,1290.4L784.9,1280.3L806.8,1280.1L815.1,1286L829.2,1284.5L851.5,1274.1L865.9,1277.2L865.2,1290.2L882.6,1280.8L884.1,1285.7L873.9,1298.2L873.7,1310L880.8,1316.3L878.1,1338L864.6,1350.5L868.5,1364L879.1,1364.4L884.3,1376.1L892.1,1379.9L916.2,1388.4L924.8,1386.3L941.9,1390.3L969.1,1401.2L978.7,1422.7L997.2,1427.3L1026.1,1437.4L1047.9,1449.2L1058,1443L1067.8,1432L1063,1413.6L1069.4,1401.8L1084.2,1390.4L1098.3,1387.1L1126,1392.1L1133.1,1403L1140.7,1403.1L1147.2,1407.2L1167.6,1410L1172.6,1418L1199.9,1417.6L1219.7,1424L1240,1431.1L1249.5,1434.8L1265.3,1427.2L1273.7,1420.3L1291.8,1418.3L1306.4,1421.4L1312,1433.3L1316.8,1425.4L1333.2,1431.1L1349.2,1432.5L1359.3,1426.4L1365.2,1418.5L1363.8,1417.1L1369.3,1405.9L1373.4,1387.5L1376.4,1381.4L1377,1381.1L1384.3,1361L1394.5,1343.6L1394.8,1342.7L1392.9,1323.5L1397.9,1313.1L1390.4,1301.6L1398.2,1292L1385.7,1294.2L1368.5,1288.4L1354.4,1303L1323.3,1305.9L1306.7,1292.2L1284.5,1291.3L1279.8,1301.9L1265.6,1305L1245.8,1291.4L1223.4,1291.8L1211.3,1266.3L1196.3,1251.8L1206.2,1231.4L1193.2,1218.7L1216,1193.2L1247.6,1192.1L1256.2,1171.5L1295.3,1175.1L1320,1157.4L1343.9,1149.6L1377.8,1149L1413.6,1168.3L1443.1,1178.9L1466.9,1174.7L1484.6,1177.1L1508.8,1162.8L1511.9,1151.1L1506.7,1132.2L1494.9,1121.9L1483.5,1118.6L1476,1110L1449.9,1086L1426.4,1075.1L1408.7,1058.1L1423.6,1053.4L1440.7,1028.8L1429.2,1017L1459.5,1004.8L1458.9,998.2L1440.5,1003.1L1424.1,1005.5L1410.4,1015.2L1391.2,1016.8L1373.6,1027.9L1374.8,1046.2L1384.8,1053.3L1405.8,1051.5L1401.7,1061.9L1379.3,1067L1351.4,1083.7L1340,1077.8L1344.6,1064.2L1322.1,1055.7L1325.8,1050.1L1345.4,1040.3L1339.5,1033.6L1307.6,1026.1L1306.2,1014.9L1287.2,1018.6L1279.6,1035L1263.7,1056.7L1264.1,1064.2L1254.2,1070.4L1248,1067.7L1242.2,1102.3L1231.6,1114L1224.1,1134L1230.7,1149.9L1233.1,1160.5L1251.1,1169.3L1247.3,1176L1222.9,1177.5L1214.2,1185.8L1197.1,1200.4L1190.7,1187.9L1190.9,1182.3L1178.4,1181.5L1167.7,1178.9L1142.9,1186L1157.1,1201.1L1146.6,1205.5L1135.3,1205.5L1124.4,1191.6L1120.6,1197.6L1125.2,1213.6L1135.4,1226L1127.7,1231.8L1139.1,1243.9L1149.2,1251.5L1149.5,1266.2L1130.5,1259.3L1136.6,1272.6L1123.6,1275.3L1131.4,1297.9L1117.8,1298.2L1100.9,1287.1L1093.3,1266.5L1089.6,1249.2L1081.7,1237.1L1071.1,1222L1069.8,1214.5L1066.2,1212.6L1065.9,1206.7L1054.5,1197.7L1052.7,1184.9L1054.4,1166.3L1057.2,1157.8L1053.8,1153.5L1049.5,1151.3L1043.7,1142.3L1034.8,1136.8L1015.6,1126.5L1003.7,1116.4L984.9,1108L967.7,1087L971.8,1084.9L962.5,1072.8L962.1,1063L948.9,1058.4L942.6,1070.9L936.5,1061.2L937,1051.1L937.7,1050.7L942.3,1048L926,1043.7L909.3,1054.1L910.4,1068.5L907.9,1076.7L914.6,1091.4L933.9,1105.7L944.2,1128.9L967,1151.3L983.1,1151.2L988.1,1157.2L982.3,1162.7L1000.7,1172.6L1015.8,1180.8L1033.4,1194.9L1035.5,1199.9L1031.7,1209.5L1020.3,1197L1002.4,1192.6L993.9,1209.9L1008.6,1219.8L1006.2,1233.6L997.6,1235.2L986.7,1257.6L978.1,1259.6L978.2,1251.6L982.4,1237.6L986.8,1232L978.9,1216.6L972.6,1203.2L964.1,1199.8L958,1188.2L944.8,1183.3L936,1172.3L920.7,1170.6L904.7,1158.2L886,1140.3L872,1124.2L865.7,1096.2L855.5,1093L838.8,1083.5L829.3,1087.4L817.4,1100.6L808.9,1102.7L790.3,1118.6L749.9,1111L720,1120.2L717.7,1137L718.8,1153.1L699.4,1171.3L673.1,1177.1L671.2,1186.2L658.6,1201.1L650.7,1222.8L658.7,1237.9L646.8,1249.6L642.4,1266.5L626.9,1271.7L612.4,1291.5L586.4,1291.8L566.8,1291.3L553.9,1300.4L546.1,1310L536.1,1307.9L528.5,1299.3L522.6,1284.6L503.5,1280.6L495.2,1287.2L484.5,1283.6L473.9,1286.4L477,1266.3L475.1,1250.3L465.9,1247.9L461,1237.9L462.6,1220.7L470.8,1211L472.3,1200.2L476.6,1184L476.1,1172.5L472,1162.7L471.1,1153.4L472.1,1133.7L463.7,1121.5L492.7,1101.1L517.8,1106.3L545.4,1106.1L567.2,1110.9L584.2,1109.4L617.4,1110.3L628,1093.3L631.9,1035.5L610.7,1004.2L595.6,988.9L564.3,977.1L562.2,954.7L588.8,947.9L623.2,955.9L616.7,920.3L636.1,933.9L683.8,909.2L690,882.7L708,876.2L724.4,869.7L734.9,860.6L753,811.2L781,796.8L798.1,797.8L802.1,790.5L819.2,788.6L823,796.2L836.9,779.1L832.3,766L831.3,745.8L823,725.9L822.4,688.3L825.8,678.3L831.7,667L849.7,664.7L856.9,654.2L873.4,643.4L872.7,663L866.7,675.2L869.1,685.8L880.3,691.4L875.3,705.3L869.1,701.3L854.4,727.6L860,745.1L860.3,758.9L881,767.1L880.8,779.6L901.7,773L913.2,763.3L936.3,777.2L946.1,788.3L960,778.1L992.1,761.8L1017.9,749.8L1038.4,755.9L1039.9,764.5L1059.7,764.9L1064.4,749.3L1092.7,737.7L1088.3,707.2L1089,679.2L1099.1,655.5L1118.4,642.4L1134.8,670.9L1151.2,670.1L1155.1,640.9L1157.5,618L1150,623L1137,609.1L1135.2,586.2L1161.1,575L1187,569.2L1209.2,575.8L1230.4,574.6L1253.7,552.1L1232.2,532.5L1195,535.8L1158.9,550.9L1125.5,559.6L1113.6,537.1L1093.8,523.4L1098.3,481.5L1088.4,441.8L1098.2,415.6L1116.8,386.7L1139.8,361L1163.7,335.3L1177.4,325.1L1175.3,304.3L1146.7,280.7L1111.4,294.9L1091.6,329.3L1094.7,358.7L1062.2,396.3L1022.5,435.5L1007.6,497.1L1022.2,526.9L1041.8,549.9L1022.9,595.5L1001.6,604.8L993.8,669.6L982.2,704.5L957.3,700.9L945.6,729.9L921.9,731.5L915.4,697L898.2,654.4L882.6,599.4L868.8,574.8L828.4,620.8L801,629.9L772.6,610L765.3,567L758.8,469.8L777.7,441.5L804.4,422.3L831.8,403.5L872.4,355.3L909.9,287.1L933.6,237.5L959.2,186.3L993.6,144.8L1020.9,108.8L1049.9,72.4L1095,46.1L1128.7,49.2L1159.9,-1.9L1197.3,0.9L1234.2,-11.8L1266.8,10.9L1298.3,34L1271.9,50.3L1294.4,87.7L1315.5,67.1L1349.2,102.7L1377.5,109.3L1405.4,116.4L1445.1,147.8L1482.9,179.7L1498.7,205.4L1500,240.5L1477.3,267.6L1443.7,281.1L1398.6,261L1352.2,242.2L1337.1,248.8L1370.5,286.1L1373.2,358.7L1399.6,373.1L1415.7,385.2L1418.3,362.5L1405.5,341.2L1419,323.6L1468.6,353.6L1485.9,341.9L1472.1,306.2L1495.5,281.5L1519.9,256.9L1538.8,259.8L1558,277.6L1569.9,242.3L1552.8,211L1562.8,178.8L1547.8,144.4L1576.7,153L1605.2,162.3L1616.8,192.9L1590.9,199.6L1591.1,229.1L1607.2,247L1638.8,235.7L1643.9,201.9L1660,192.2L1660,1030.9L1660,1030.9L1654.3,1041.7L1634.4,1046.5L1614,1076.5L1632.6,1103.6L1630.6,1122.6L1653,1155.4L1660,1164.7L1660,1234.8ZM182.2,-60L202.4,-29.9L210.2,21L173.6,32.9L157.8,9L132.4,-27.5L139.4,15.5L115.7,47.8L169.7,50.4L198,53.6L169.9,79.4L143,105.2L114.6,127.5L87.2,150L57,159.3L27.2,169.2L4.6,169.4L-16.7,190.5L-45.2,246.4L-60,258.4L-60,-60Z","borders":"M369.8,1608L371.5,1600.6L400,1576.4L409.7,1547.8L416,1546.1L422.7,1528.2L440,1525.8L447.4,1528.7L456.7,1528.7L463.3,1523.5L476,1522.8L475.5,1510.4L478.6,1510.4L478.7,1511.9L478.3,1516.4L478.2,1551.2L410.9,1550L411.6,1607.7L409,1608M1660,1022.5L1653.2,1019.3L1655.3,1003.9L1642.2,983.6L1626.9,984.5L1609.6,963.7L1621.4,940.1L1615.4,933.7L1631.8,898.7L1652.9,917.2L1655.4,893.8L1660,890M979.9,1608L981.7,1606.9L983.8,1608M1092.7,737.7L1114.2,744L1123.2,749.7L1121,759.4L1122.7,768.3L1085,768.9L1059.7,764.9M1653,1155.4L1640.8,1166.4L1637.2,1173.3L1628.2,1171.5L1614.1,1154.8L1608.3,1153.9L1595.4,1147.5L1589.1,1136.2L1570,1130.3L1557.5,1134.7L1554,1129.5L1526.1,1116.1L1495.9,1111.5L1478.5,1106.7L1476,1110M1440.5,1003.1L1441.1,989.6L1451.7,981.1L1471.6,978.9L1474.8,968.7L1470.2,951.6L1478.6,935.2L1478.4,925.9L1448.1,915.6L1436.1,915.9L1423.4,900.9L1407.7,906L1381.7,894.7L1382.1,888.3L1374.8,874.2L1358.4,872.6L1356.7,862.4L1361.9,855.7L1348.8,836.9L1327.5,840.1L1321.3,838.4L1316.1,846L1308.4,844.7L1303.4,823.1L1298.5,811.8L1302.5,808.6L1319.1,809.8L1327.1,802.3L1321.1,793.1L1307.3,787L1308.5,780.7L1300.2,774.3L1287.3,751.2L1291.8,741.6L1289.8,724.7L1269.7,716L1258.9,720.3L1256,711.3L1234.4,702.1L1227.8,680.2L1226,661.9L1216.1,653.1L1225,641L1218.9,604.6L1233.5,581.7L1230.4,574.6M1232.2,532.5L1276.1,478.2L1295.1,452.9L1302.9,430.2L1272.6,399L1280.9,368.6L1262.4,333L1276.2,290.9L1252.4,232.5L1271.3,192.5L1239.9,155.9L1242.9,116.3L1259.5,111L1294.4,87.7M1342.3,1036.8L1347.7,1029.5L1362.3,1035.8L1368.8,1037L1371.5,1042.8L1374.6,1043.7M1242.9,116.3L1251.6,75.4L1225.3,51.6L1193.5,71.9L1183.3,114.7L1163.8,140L1141.8,126.3L1115,129.1L1092.2,98.7L1079.9,114L1067.2,116.3L1064.2,153.5L1025.5,144.5L1020.1,175.4L1000.4,175.2L986.8,213.7L966.3,271.3L934.5,340.9L941.9,357.2L934.8,375.9L914.5,375.1L901.2,418.4L902.4,477.3L915.5,499.2L908.7,548.4L891.7,576.3L882.6,599.4M708,876.2L710.9,887.6L720.5,888.1L730,901.1L744.3,916.2L754.9,913.7L772.8,928.2L777.4,930.9L783.3,930.3L793,938.5L822.5,944.3L812.2,965.5L809.6,987.4L803.9,992.6L794.6,989.8L795.3,997.5L780.3,1014.4L779.9,1027.9L789.7,1023.2L796.8,1036.2L795.9,1044.5L802,1055.5L794.8,1064.4L800.2,1086.7L811.3,1090.3L808.9,1102.7M717.7,1137L693.9,1140.6L670.8,1128L663.3,1134L625.6,1121.3L617.4,1110.3M527.7,1608L524,1572.1L555.4,1571.8L606.6,1608M478.3,1516.4L517.2,1543.9L555.4,1571.8M898.5,1608L902.6,1605.6L910.7,1608M1377,1381.1L1383.8,1381.1L1385.7,1376.8L1391.2,1376.5L1391.5,1386.5L1388.7,1390.2L1389.2,1390.4L1385.5,1398.1L1378.2,1394.7L1373.9,1410.9L1379,1413.6L1373.7,1416.9L1372.8,1423.2L1382.5,1420L1383,1429.3L1372.8,1467.3L1370.8,1461.2L1359.3,1426.4M1394.8,1342.7L1404.1,1344L1407.4,1353.7L1396.2,1363L1391.2,1376.5M1385.5,1398.1L1385.5,1412.9L1382.5,1420M892.1,1379.9L890.9,1398.7L880.9,1405.7L874.6,1413.4L860.5,1422.7L862.7,1432.6L860.9,1442.7L850.9,1448.2L842.2,1405.1L829.5,1395.4L829.3,1389.5L812.6,1374.9L810.8,1356.3L823.4,1342.4L828.2,1321.8L825,1297.6L829.2,1284.5M478.6,1510.4L478.5,1482.8L511.6,1465.4L532.1,1461.8L548.9,1455.5L556.8,1443.6L580.7,1434.2L581.6,1416.4L593.5,1414.3L602.8,1405.3L629.6,1401.3L633.3,1391.8L627.9,1386.6L620.9,1360.7L619.6,1345.6L611.9,1329.6M850.9,1448.2L857.5,1469.1L858.6,1480L855,1499L856.6,1509.7L853.9,1522.3L855.7,1536.7L847.6,1546.3L859.7,1562.9L860.5,1572.6L867.8,1585.2L877.4,1581.1L893.6,1591.5L902.6,1605.6M1389.2,1390.4L1412,1400L1452.1,1374L1460.4,1403.7L1456.5,1407.4L1415.4,1419.5L1435.9,1443.4L1429.1,1447.5L1425.7,1455.4L1410.1,1458.7L1405.2,1467.2L1396.3,1474.4L1373.4,1470.7M1649.5,1489.5L1635.1,1490.2L1630,1479L1611.7,1476.7L1626.7,1454.1L1640.5,1456.1M1452.1,1374L1497.6,1348.3L1505.3,1318L1503.4,1299.5L1514.6,1293.2L1525.1,1277.2L1533.9,1273.2L1557.8,1276.5L1565,1283.1L1574.8,1278.7L1588.1,1309.2L1601.5,1316.8L1603.1,1331.5L1592.8,1340.1L1588,1359.5L1602.3,1382.9L1627.4,1396.3L1637.9,1414.7L1634.5,1432.1L1641.1,1432.1L1641.3,1444.7L1652.6,1457.2M1611.7,1476.7L1573.6,1474.9L1515.7,1427.2L1485.2,1410.3L1460.4,1403.7M1574.8,1278.7L1563.6,1258L1567.6,1249.9L1561.2,1219.7L1575.3,1212.1L1578.5,1222.2L1588.9,1234.4L1602.9,1237.8L1610.4,1237.1L1634.5,1217.6L1642.2,1215.6L1648.3,1223.4L1641.3,1236.5L1654,1250.2L1659.1,1248.9M1397.9,1313.1L1403.4,1307.6L1408.9,1302L1410.1,1287.8L1416.8,1292.8L1439.4,1285.6L1450.2,1290.5L1467.1,1290.4L1490.8,1280.8L1501.8,1281.2L1525.1,1277.2M1602.9,1237.8L1594.6,1222.6L1594.7,1218.5L1585.6,1218.6L1579.5,1211.4L1575.3,1212.1L1567.2,1204.3L1551.9,1197.7L1553.9,1184.5L1550.4,1175L1578.9,1170.7L1583.2,1177.9L1591,1182.6L1586.8,1189.4L1597.8,1198.6L1592,1207.1L1600.7,1214.4L1609.9,1218.7L1610.4,1237.1M1079.9,114L1107.3,141.8L1139.3,179.5L1139.8,260.9L1146.7,280.7M1308.4,844.7L1290.8,846.6L1284.5,853.9L1283.2,870.6L1275,867.4L1256.5,868.9L1251.1,861.3L1243.5,867L1235.7,862.2L1219.6,861.5L1196.7,853.6L1176,851L1160.1,851.8L1148.9,860.7L1139,862L1138.6,847.3L1132.3,831.7L1144.6,824.8L1144.7,811.3L1139,798.2L1138.2,782.9L1157.9,783.2L1180.2,770L1185,750L1201.8,738.5L1199.9,722.4L1212.4,716.2L1234.4,702.1M1263.7,1056.7L1254.4,1051.7L1244.7,1056.4L1235.6,1051L1240.7,1047.8L1244.3,1037.7L1250,1028.3L1248.5,1023L1252.8,1020.6L1254.8,1024.7L1266.9,1025.6L1272.3,1023.4L1268.5,1020.4L1269.9,1015.9L1262.7,1008.3L1259.8,995.7L1252.3,990.7L1253.8,980.4L1244.6,972.2L1236.1,971L1221,961.4L1207.3,964.4L1202.5,969L1193.8,969L1188.7,976.2L1173.5,979.1L1166.5,983.8L1157,976.4L1143.8,976.2L1131.1,972.8L1122.3,979.4L1120.9,971.2L1109.4,962.8L1113.5,950.3L1119.2,942.1L1123.6,944L1118.4,929.8L1137,903.4L1147.2,899.6L1149.3,890.5L1139,862M1119.2,942.1L1099.7,930L1084.9,934.5L1075.2,931.3L1063,938L1052.7,926.8L1044.3,931.2L1043.1,929.2L1033.7,913.6L1018.4,911.7L1016.5,901.6L1002.4,898L999.4,906.4L988.2,899.7L989.5,890.8L974.2,888L964.5,877.5L956,856.5L957.7,845L952.6,827L945.1,815L950.8,805.8L946.1,788.3M1122.7,768.3L1133.2,772.2L1138.2,782.9M1122.3,979.4L1109.7,985.8L1100,1006.3L1087.6,1026.6L1071.2,1032.2L1058.4,1030.9L1042.7,1038.6L1035,1043.1L1018.1,1037.4L1002.7,1024.7L996.2,1021L992.2,1010.9L988.8,1010.6M1004.7,972L1003.2,984.5L991.6,984.6L995.6,991.2L988.8,1010.6L984.8,1015.7L966.9,1016.4L956.6,1023.1L939.7,1020.9L910.3,1013.1L905.7,1002.7L885.4,1007.9L883.1,1013.6L870.6,1009.4L860.1,1008.6L850.9,1003.1L854,995.6L853.2,990.3L859.4,988.6L869.8,997L872.7,989L890.8,990.3L905.5,984.8L915.3,985.8L921.7,992L923.6,986.9L920.7,966.9L928.1,963L935.3,948.7L950.5,958.7L962.1,945.9L969.3,943.6L985.2,953.1L994.9,951.5L1004.3,957.4L1002.6,961.3L1004.7,972L1015.1,979.8L1022.7,983.2L1039.9,979.4L1041.6,973.3L1049.8,972.4L1059.7,967.6L1061.9,969.6L1071.5,965.7L1076.4,958.4L1083.1,956.5L1105.1,966L1109.4,962.8M1235.6,1051L1231.9,1037.6L1234.1,1024.9L1233.4,1011.9L1221.6,993.9L1215,981.1L1208.7,972L1202.5,969M1242.2,1102.3L1230.2,1099.3L1215.2,1088.9L1191.1,1095.6L1180.9,1102.8L1150.8,1101.3L1135,1096.9L1127.1,1099L1121.2,1087.2L1117.4,1082.2L1122.2,1077.4L1117.1,1073.8L1110.7,1080.3L1098.7,1071.9L1097.1,1059.9L1084.6,1053.1L1082.3,1043.8L1071.2,1032.2M1088.3,707.2L1111.8,695.9L1146.2,698.3L1166.4,694.6L1169.2,702.3L1180.2,704.6L1199.9,722.4M1155.1,640.9L1172.6,634.1L1181.6,638.9L1199.2,653.1L1216.1,653.1M964.5,877.5L955.3,880.9L949.9,877.2L944.7,883.4L930,889.7L922.4,897.7L907.5,904.7L911.1,914.3L913.3,927.6L923.7,935.2L935.3,948.7M853.2,990.3L831.2,981L827,987.6L809.6,987.4M783.3,930.3L784.5,916.4L780.4,909.2L782.7,887.4L779.3,853L791.6,853L796.8,840.4L801.9,809.4L798.1,797.8M831.3,745.8L846.8,750.6L860,745.1M1230.7,1149.9L1213,1146.2L1192.1,1154.8L1191.9,1168.5L1173.3,1171.1L1158.8,1161.5L1142.4,1169L1127.2,1168.3L1125.7,1150.1L1115.5,1141.2L1118.9,1137.3L1116.7,1134L1120.1,1125.1L1127.9,1116.3L1117.9,1104.1L1116.1,1093.7L1121.2,1087.2M1192.1,1154.8L1202.1,1162.1L1195.8,1179.2L1190.9,1182.3M1069.8,1214.5L1079.3,1201.5L1080.5,1192.7L1087.2,1188.9L1087.6,1181.8L1101,1179.3L1108.8,1173.4L1119.9,1173.9L1123.3,1169.2L1127.2,1168.3M1508.8,1162.8L1530.6,1161.5L1550.4,1175M1053.7,1153.5L1052.4,1144.7L1061.3,1131L1062.6,1136.2L1068.1,1133.8L1072.5,1141.2L1077.4,1144.1L1078.8,1154.1L1076.2,1163.4L1079.1,1175.1L1087.6,1181.8M1042.7,1038.6L1047.6,1050L1054.2,1058.4L1046.3,1069.3L1037,1062.8L1022.8,1063.2L1005.2,1058.4L995.6,1059.1L991.1,1065.1L983.8,1058.4L979.5,1070.4L989.5,1083.9L994,1092.8L1003.4,1103.5L1011.2,1109.7L1019,1121.5L1037.1,1132.1L1034.8,1136.8M937.7,1050.7L952.1,1051.6L955.8,1046.7L962.8,1051.5L970.8,1052L970.7,1043.9L977.9,1040.9L979.9,1028.9L996.2,1021M870.6,1009.4L869,1021.6L860,1026.7L844.8,1022.9L840.3,1034.9L830.6,1035.8L827,1031.1L815.5,1041.1L805.6,1042.5L796.8,1036.2M772.8,928.2L775,910.4L780.4,909.2M724.4,869.7L739.5,872.3L758.4,865.4L771.4,879.8L782.7,887.4M471.1,1153.4L478.6,1146.3L486.9,1142.3L492.1,1155.8L504.2,1155.8L507.6,1152.3L519.6,1153.3L525.4,1167.1L515.8,1174.4L515.6,1195.6L512.3,1199.5L511.5,1212.2L502.6,1214.3L510.8,1230.3L505.1,1247.5L512.2,1255.3L509.4,1262.3L501.8,1272.1L503.5,1280.6M501.1,739.8L505.3,758.9L501.1,777.8L513.8,777.3L529.3,784.5M939.7,1020.9L937.4,1035.5L942.3,1048M1578.9,1170.7L1584,1166.3L1599.3,1174.1L1610.3,1175.7L1613.1,1172.5L1603,1157.7L1608.3,1153.9M1004.3,957.4L1007.2,950.5L1016.3,951.1L1023.3,947.8L1023.8,944.9L1027.8,943.4L1029.2,936.3L1033.9,934.9L1037.1,929.3L1043.1,929.2M1353.3,1332.4L1351.1,1331.5L1347.2,1333.4L1344.1,1332.9L1343.1,1333.8L1342.7,1331.3L1341.2,1329.7L1337.2,1329.5L1331.7,1331.6L1327.9,1330.3M1169.2,1608L1169.2,1555.7L1169.2,1473.5L1163.1,1454.5L1168.4,1439.8L1165.2,1429.5L1172.6,1418M1046.3,1069.3L1053.7,1069.2L1048.6,1081.9L1058.5,1092.9L1055.4,1106.2L1050.6,1107.5L1046.8,1110.1L1040.2,1116.6L1037.1,1132.1M1078.8,1154.1L1081.4,1154.3L1082.3,1148.6L1094.4,1144.4L1099,1143.3L1106,1141.7L1115.5,1141.2M1099,1143.3L1098.3,1141.2L1100.8,1137.9L1103.1,1131.1L1100.2,1131.3L1096.2,1126.1L1092.8,1124.8L1090.2,1120.3L1086.3,1118.6L1083.4,1114.6L1079.7,1116.2L1076.9,1125.5L1072,1127.5L1073.6,1125.1L1065.8,1119.3L1059.1,1116.3L1056.1,1112.4L1050.6,1107.5M1072,1127.5L1068.1,1133.8"},"airports":[{"iata":"MAD","name":"Adolfo Suárez Madrid–Barajas Airport","city":"Madrid","country":"ES","size":5,"weight":428.64,"departures":19,"x":583.1,"y":1191.2},{"iata":"CDG","name":"Charles de Gaulle International Airport","city":"Paris (Roissy-en-France, Val-d'Oise)","country":"FR","size":5,"weight":407.6,"departures":17,"x":708.8,"y":944.5},{"iata":"IST","name":"İstanbul Airport","city":"Istanbul","country":"TR","size":5,"weight":389.92,"departures":11,"x":1245.8,"y":1170},{"iata":"FRA","name":"Frankfurt Main Airport","city":"Frankfurt am Main","country":"DE","size":5,"weight":374.82,"departures":23,"x":832,"y":912.4},{"iata":"AMS","name":"Amsterdam Airport Schiphol","city":"Amsterdam","country":"NL","size":5,"weight":345.29,"departures":20,"x":754.1,"y":837.7},{"iata":"ZRH","name":"Zürich Airport","city":"Zurich","country":"CH","size":5,"weight":330.87,"departures":14,"x":831.8,"y":992.3},{"iata":"FCO","name":"Rome–Fiumicino Leonardo da Vinci International Airport","city":"Rome","country":"IT","size":5,"weight":298.71,"departures":30,"x":907.7,"y":1155.5},{"iata":"CGN","name":"Cologne Bonn Airport","city":"Köln (Cologne)","country":"DE","size":5,"weight":288.14,"departures":12,"x":802.9,"y":885.4},{"iata":"HAJ","name":"Hannover Airport","city":"Hannover","country":"DE","size":5,"weight":285.13,"departures":13,"x":855.1,"y":832.6},{"iata":"ORY","name":"Paris-Orly Airport","city":"Paris (Orly, Val-de-Marne)","country":"FR","size":5,"weight":268.47,"departures":13,"x":704.8,"y":953.3},{"iata":"BRU","name":"Brussels Airport","city":"Zaventem","country":"BE","size":5,"weight":267.08,"departures":17,"x":748.4,"y":884.2},{"iata":"CPH","name":"Copenhagen Kastrup Airport","city":"Copenhagen","country":"DK","size":5,"weight":262.62,"departures":12,"x":916,"y":722.3},{"iata":"RZE","name":"Rzeszów-Jasionka Airport","city":"Jasionka","country":"PL","size":5,"weight":262.26,"departures":9,"x":1108.2,"y":909.7},{"iata":"HEL","name":"Helsinki Vantaa Airport","city":"Helsinki (Vantaa)","country":"FI","size":5,"weight":251.04,"departures":4,"x":1168.5,"y":540.2},{"iata":"LYS","name":"Lyon Saint-Exupéry Airport","city":"Colombier-Saugnieu, Rhône","country":"FR","size":5,"weight":246.86,"departures":13,"x":760.8,"y":1044},{"iata":"BER","name":"Berlin Brandenburg Airport","city":"Berlin","country":"DE","size":5,"weight":246.83,"departures":11,"x":933.4,"y":835.9},{"iata":"ATH","name":"Athens Eleftherios Venizelos International Airport","city":"Spata-Artemida","country":"GR","size":5,"weight":246.83,"departures":8,"x":1147.6,"y":1258.9},{"iata":"MUC","name":"Munich Airport","city":"Munich","country":"DE","size":5,"weight":246.83,"departures":20,"x":898.2,"y":964.9},{"iata":"AYT","name":"Antalya International Airport","city":"Antalya","country":"TR","size":5,"weight":239.67,"departures":10,"x":1288.2,"y":1285.7},{"iata":"MXP","name":"Milan Malpensa International Airport","city":"Ferno (VA)","country":"IT","size":5,"weight":238.99,"departures":8,"x":835.4,"y":1046.8},{"iata":"LHR","name":"London Heathrow Airport","city":"London","country":"GB","size":5,"weight":237.15,"departures":7,"x":647,"y":865.6},{"iata":"BSL","name":"EuroAirport Basel–Mulhouse–Freiburg","city":"Bâle / Mulhouse","country":"FR","size":5,"weight":237.03,"departures":14,"x":810.7,"y":988},{"iata":"BCN","name":"Josep Tarradellas Barcelona-El Prat Airport","city":"Barcelona","country":"ES","size":5,"weight":234.36,"departures":9,"x":699,"y":1169.4},{"iata":"STR","name":"Stuttgart Airport","city":"Stuttgart","country":"DE","size":5,"weight":233.48,"departures":12,"x":845.6,"y":954.5},{"iata":"ARN","name":"Stockholm-Arlanda Airport","city":"Stockholm","country":"SE","size":5,"weight":228.59,"departures":13,"x":1024.2,"y":567.6},{"iata":"ESB","name":"Esenboğa International Airport","city":"Ankara","country":"TR","size":5,"weight":222.62,"departures":5,"x":1333.2,"y":1201},{"iata":"ZAZ","name":"Zaragoza Airport","city":"Zaragoza","country":"ES","size":5,"weight":219.59,"departures":5,"x":635,"y":1159.3},{"iata":"PRG","name":"Václav Havel Airport Prague","city":"Prague","country":"CZ","size":5,"weight":219.33,"departures":23,"x":948.9,"y":910},{"iata":"BUD","name":"Budapest Liszt Ferenc International Airport","city":"Budapest","country":"HU","size":5,"weight":218.55,"departures":9,"x":1051.5,"y":993.2},{"iata":"MSQ","name":"Minsk National Airport","city":"Minsk","country":"BY","size":5,"weight":217.89,"departures":0,"x":1231.6,"y":783.8},{"iata":"WAW","name":"Warsaw Chopin Airport","city":"Warsaw","country":"PL","size":5,"weight":216.94,"departures":7,"x":1086.5,"y":842.5},{"iata":"HAM","name":"Hamburg Helmut Schmidt Airport","city":"Hamburg","country":"DE","size":5,"weight":214.71,"departures":17,"x":861.3,"y":792.7},{"iata":"VIE","name":"Vienna International Airport","city":"Vienna","country":"AT","size":4,"weight":208.55,"departures":11,"x":996.3,"y":972.4},{"iata":"LEJ","name":"Leipzig/Halle Airport","city":"Schkeuditz","country":"DE","size":4,"weight":208.55,"departures":5,"x":907.3,"y":867.2},{"iata":"OSL","name":"Oslo-Gardermoen International Airport","city":"Oslo (Gardermoen)","country":"NO","size":4,"weight":208.55,"departures":10,"x":884.1,"y":545.3},{"iata":"DUB","name":"Dublin Airport","city":"Dublin","country":"IE","size":4,"weight":207.79,"departures":4,"x":528,"y":799.7},{"iata":"RMO","name":"Chişinău International Airport","city":"Chişinău","country":"MD","size":4,"weight":207.62,"departures":4,"x":1249.9,"y":1008.3},{"iata":"SAW","name":"Istanbul Sabiha Gökçen International Airport","city":"Pendik, Istanbul","country":"TR","size":4,"weight":203.01,"departures":7,"x":1257.6,"y":1180.2},{"iata":"OTP","name":"Bucharest Henri Coandă International Airport","city":"Otopeni","country":"RO","size":4,"weight":199.39,"departures":10,"x":1191.9,"y":1077.6},{"iata":"BEG","name":"Belgrade Nikola Tesla Airport","city":"Belgrade","country":"RS","size":4,"weight":199.36,"departures":2,"x":1073,"y":1070.5},{"iata":"TLS","name":"Toulouse-Blagnac Airport","city":"Toulouse/Blagnac","country":"FR","size":4,"weight":199.36,"departures":7,"x":684.4,"y":1104.5},{"iata":"MRS","name":"Marseille Provence Airport","city":"Marignane, Bouches-du-Rhône","country":"FR","size":4,"weight":199.36,"departures":37,"x":763.3,"y":1109.9},{"iata":"COV","name":"Çukurova International Airport","city":"Tarsus","country":"TR","size":4,"weight":199.33,"departures":4,"x":1375.8,"y":1285.9},{"iata":"CFE","name":"Clermont-Ferrand Auvergne airport","city":"Clermont-Ferrand","country":"FR","size":4,"weight":197.53,"departures":9,"x":721.4,"y":1042.2},{"iata":"GRZ","name":"Graz Airport","city":"Feldkirchen bei Graz","country":"AT","size":4,"weight":196.15,"departures":6,"x":973.1,"y":1006.4},{"iata":"SKG","name":"Thessaloniki Macedonia International Airport","city":"Thessaloniki","country":"GR","size":4,"weight":193.91,"departures":10,"x":1127.6,"y":1190.5},{"iata":"MLA","name":"Malta International Airport","city":"Valletta","country":"MT","size":4,"weight":185.87,"departures":21,"x":953.7,"y":1312.5},{"iata":"KYA","name":"Konya Airport","city":"Konya","country":"TR","size":4,"weight":185.84,"departures":3,"x":1324.3,"y":1257.8},{"iata":"PMO","name":"Falcone–Borsellino Airport","city":"Palermo","country":"IT","size":4,"weight":183.74,"departures":31,"x":924.9,"y":1252.7},{"iata":"LGW","name":"London Gatwick Airport","city":"London","country":"GB","size":4,"weight":182.95,"departures":2,"x":652.6,"y":876.1},{"iata":"LUX","name":"Luxembourg-Findel International Airport","city":"Luxembourg","country":"LU","size":4,"weight":182.84,"departures":12,"x":783.8,"y":925.1},{"iata":"GNY","name":"Şanlıurfa GAP Airport","city":"Şanlıurfa","country":"TR","size":4,"weight":182.84,"departures":7,"x":1454.3,"y":1271.6},{"iata":"VCE","name":"Venice Marco Polo Airport","city":"Venezia (VE)","country":"IT","size":4,"weight":181.45,"departures":17,"x":909.8,"y":1050.5},{"iata":"PMI","name":"Palma de Mallorca Airport","city":"Palma de Mallorca","country":"ES","size":4,"weight":178.8,"departures":19,"x":712.6,"y":1216.4},{"iata":"ADB","name":"Adnan Menderes International Airport","city":"Gaziemir","country":"TR","size":4,"weight":176.2,"departures":5,"x":1213.5,"y":1249.6},{"iata":"GVA","name":"Geneva International Airport","city":"Geneva","country":"CH","size":4,"weight":175.58,"departures":16,"x":781.7,"y":1028.9},{"iata":"AGP","name":"Málaga-Costa del Sol Airport","city":"Málaga","country":"ES","size":4,"weight":172.76,"departures":15,"x":564.1,"y":1291.4},{"iata":"ECN","name":"Ercan International Airport","city":"Tymbou (Kirklar)","country":"CY","size":4,"weight":172.71,"departures":1,"x":1343.7,"y":1330},{"iata":"BTS","name":"M. R. Štefánik Airport","city":"Bratislava","country":"SK","size":4,"weight":171.87,"departures":6,"x":1009.5,"y":970.6},{"iata":"LIS","name":"Lisbon Humberto Delgado Airport","city":"Lisbon","country":"PT","size":4,"weight":169.15,"departures":3,"x":469,"y":1236.8},{"iata":"HHN","name":"Frankfurt-Hahn Airport","city":"Frankfurt am Main (Lautzenhausen)","country":"DE","size":4,"weight":168.43,"departures":4,"x":805.4,"y":915},{"iata":"LPA","name":"Gran Canaria Airport","city":"Gran Canaria Island","country":"ES","size":4,"weight":164.18,"departures":4,"x":340.8,"y":1504},{"iata":"BES","name":"Brest Bretagne airport","city":"Brest","country":"FR","size":4,"weight":164.18,"departures":3,"x":565.8,"y":962},{"iata":"BOD","name":"Bordeaux–Mérignac Airport","city":"Bordeaux","country":"FR","size":4,"weight":164.18,"departures":3,"x":641.7,"y":1070.2},{"iata":"KEF","name":"Keflavik International Airport","city":"Reykjavík","country":"IS","size":4,"weight":161.22,"departures":0,"x":192.7,"y":378.9},{"iata":"MAN","name":"Manchester Airport","city":"Manchester, Greater Manchester","country":"GB","size":4,"weight":159.97,"departures":0,"x":609.7,"y":802.4},{"iata":"BDS","name":"Brindisi Airport","city":"Brindisi","country":"IT","size":4,"weight":159.79,"departures":13,"x":1024.6,"y":1186.8},{"iata":"BJV","name":"Milas Bodrum International Airport","city":"Bodrum","country":"TR","size":4,"weight":155.79,"departures":4,"x":1223.9,"y":1276.7},{"iata":"LNZ","name":"Linz-Hörsching Airport","city":"Linz","country":"AT","size":4,"weight":155.79,"departures":0,"x":947.4,"y":968.6},{"iata":"DUS","name":"Düsseldorf Airport","city":"Düsseldorf","country":"DE","size":4,"weight":155.77,"departures":1,"x":795.2,"y":871.5},{"iata":"PSA","name":"Pisa International Airport","city":"Pisa (PI)","country":"IT","size":4,"weight":155.21,"departures":3,"x":869.6,"y":1103},{"iata":"PIK","name":"Glasgow Prestwick Airport","city":"Prestwick, South Ayrshire","country":"GB","size":4,"weight":154.71,"departures":0,"x":562.5,"y":726.5},{"iata":"SOF","name":"Sofia Airport","city":"Sofia","country":"BG","size":4,"weight":154.48,"departures":1,"x":1136.8,"y":1130.8},{"iata":"NCE","name":"Nice-Côte d'Azur Airport","city":"Nice, Alpes-Maritimes","country":"FR","size":4,"weight":152.72,"departures":18,"x":804.4,"y":1103.7},{"iata":"OSR","name":"Leoš Janáček Airport Ostrava","city":"Mošnov","country":"CZ","size":3,"weight":147.69,"departures":3,"x":1027.9,"y":922.9},{"iata":"CND","name":"Mihail Kogălniceanu International Airport","city":"Constanța","country":"RO","size":3,"weight":147.67,"departures":4,"x":1240.8,"y":1083.6},{"iata":"TSR","name":"Timișoara Traian Vuia International Airport","city":"Timişoara","country":"RO","size":3,"weight":147.67,"departures":4,"x":1094.1,"y":1041.6},{"iata":"TLL","name":"Lennart Meri Tallinn Airport","city":"Tallinn","country":"EE","size":3,"weight":146.32,"departures":4,"x":1165.8,"y":577.1},{"iata":"OPO","name":"Francisco de Sá Carneiro Airport","city":"Porto","country":"PT","size":3,"weight":146.32,"departures":2,"x":478.3,"y":1170.7},{"iata":"NYO","name":"Stockholm Skavsta Airport","city":"Nyköping","country":"SE","size":3,"weight":145.76,"departures":2,"x":1003.3,"y":602},{"iata":"BGY","name":"Il Caravaggio International Airport","city":"Orio al Serio (BG)","country":"IT","size":3,"weight":145.44,"departures":6,"x":855.6,"y":1045.7},{"iata":"SVG","name":"Stavanger Airport, Sola","city":"Stavanger","country":"NO","size":3,"weight":143.96,"departures":4,"x":772.1,"y":598.6},{"iata":"FUE","name":"Fuerteventura Airport","city":"El Matorral","country":"ES","size":3,"weight":142.3,"departures":3,"x":372,"y":1491.9},{"iata":"LIL","name":"Lille Airport","city":"Lesquin","country":"FR","size":3,"weight":141.49,"departures":3,"x":720,"y":895.1},{"iata":"MMX","name":"Malmö Sturup Airport","city":"Malmö","country":"SE","size":3,"weight":139.49,"departures":1,"x":930.8,"y":725.2},{"iata":"SVQ","name":"Seville Airport","city":"Seville","country":"ES","size":3,"weight":138.46,"departures":6,"x":535.5,"y":1272.3},{"iata":"BFS","name":"Belfast International Airport","city":"Belfast","country":"GB","size":3,"weight":137.92,"departures":1,"x":528.9,"y":756.7},{"iata":"AAR","name":"Aarhus Airport","city":"Aarhus","country":"DK","size":3,"weight":137.67,"departures":2,"x":874.2,"y":697.1},{"iata":"LLA","name":"Luleå Airport","city":"Luleå","country":"SE","size":3,"weight":137.66,"departures":3,"x":1110.2,"y":303.9},{"iata":"CHQ","name":"Chania International Airport","city":"Souda","country":"GR","size":3,"weight":137.5,"departures":9,"x":1151.8,"y":1320.5},{"iata":"RHO","name":"Rhodes International Airport \"Diagoras\"","city":"Rhodes","country":"GR","size":3,"weight":134.79,"departures":9,"x":1232.5,"y":1298.3},{"iata":"LJU","name":"Ljubljana Jože Pučnik Airport","city":"Zgornji Brnik","country":"SI","size":3,"weight":134.41,"departures":1,"x":953,"y":1029.3},{"iata":"TRN","name":"Turin Airport","city":"Caselle Torinese (TO)","country":"IT","size":3,"weight":134.41,"departures":5,"x":813.3,"y":1059.4},{"iata":"GOT","name":"Göteborg Landvetter Airport","city":"Göteborg","country":"SE","size":3,"weight":134.33,"departures":1,"x":908.3,"y":646},{"iata":"KLU","name":"Klagenfurt Airport","city":"Klagenfurt am Wörthersee","country":"AT","size":3,"weight":133.18,"departures":4,"x":950.5,"y":1016.9},{"iata":"HER","name":"Heraklion International Nikos Kazantzakis Airport","city":"Heraklion","country":"GR","size":3,"weight":132.7,"departures":0,"x":1172.9,"y":1325.3},{"iata":"ZAG","name":"Zagreb Franjo Tuđman International Airport","city":"Velika Gorica","country":"HR","size":3,"weight":131.28,"departures":0,"x":986,"y":1043.5},{"iata":"KUN","name":"Kaunas International Airport","city":"Kaunas","country":"LT","size":3,"weight":131.17,"departures":0,"x":1150.5,"y":745.8},{"iata":"DBV","name":"Dubrovnik Ruđer Bošković Airport","city":"Dubrovnik","country":"HR","size":3,"weight":129.87,"departures":0,"x":1031.1,"y":1134.5},{"iata":"AAL","name":"Aalborg Airport","city":"Aalborg","country":"DK","size":3,"weight":128.04,"departures":0,"x":858.5,"y":667.6},{"iata":"SCQ","name":"Santiago-Rosalía de Castro Airport","city":"Santiago de Compostela","country":"ES","size":3,"weight":127.95,"departures":0,"x":483.8,"y":1125.2},{"iata":"OST","name":"Ostend-Bruges International Airport","city":"Oostende","country":"BE","size":3,"weight":127.95,"departures":0,"x":715.4,"y":874.5},{"iata":"KTW","name":"Katowice Wojciech Korfanty International Airport","city":"Katowice","country":"PL","size":3,"weight":127.95,"departures":0,"x":1047.8,"y":898},{"iata":"BBU","name":"Bucharest Băneasa Aurel Vlaicu International Airport","city":"Bucharest","country":"RO","size":3,"weight":127.95,"departures":0,"x":1191.9,"y":1079.6},{"iata":"BOJ","name":"Burgas Airport","city":"Burgas","country":"BG","size":3,"weight":127.95,"departures":0,"x":1220.8,"y":1134.3},{"iata":"RIX","name":"Riga International Airport","city":"Riga","country":"LV","size":3,"weight":127.95,"departures":0,"x":1148.1,"y":674.1},{"iata":"TFS","name":"Tenerife Sur Airport","city":"Tenerife","country":"ES","size":3,"weight":127.95,"departures":0,"x":316.5,"y":1501.4},{"iata":"SNN","name":"Shannon Airport","city":"Shannon","country":"IE","size":3,"weight":127.87,"departures":0,"x":473.3,"y":824.5},{"iata":"BRE","name":"Bremen Airport","city":"Bremen","country":"DE","size":3,"weight":126.51,"departures":0,"x":836.7,"y":812.7},{"iata":"TFN","name":"Tenerife Norte-Ciudad de La Laguna Airport","city":"Tenerife","country":"ES","size":3,"weight":126.11,"departures":0,"x":321.2,"y":1491.2},{"iata":"MPL","name":"Montpellier-Méditerranée Airport","city":"Montpellier/Méditerranée","country":"FR","size":3,"weight":123.9,"departures":0,"x":737.7,"y":1106},{"iata":"BIO","name":"Bilbao Airport","city":"Bilbao","country":"ES","size":3,"weight":123.9,"departures":0,"x":596.7,"y":1113.8},{"iata":"BLL","name":"Billund Airport","city":"Billund","country":"DK","size":3,"weight":121.64,"departures":0,"x":844.2,"y":717.8},{"iata":"VRN","name":"Verona Villafranca Valerio Catullo Airport","city":"Caselle (VR)","country":"IT","size":3,"weight":119.58,"departures":0,"x":879.7,"y":1053.7},{"iata":"CRL","name":"Brussels South Charleroi Airport","city":"Charleroi","country":"BE","size":3,"weight":118.8,"departures":0,"x":747.9,"y":898.4},{"iata":"BHX","name":"Birmingham Airport","city":"Birmingham, West Midlands","country":"GB","size":3,"weight":118.61,"departures":0,"x":620.6,"y":832.8},{"iata":"STN","name":"London Stansted Airport","city":"London, Essex","country":"GB","size":3,"weight":118.42,"departures":0,"x":661.2,"y":851.9},{"iata":"PRN","name":"Priština Adem Jashari International Airport","city":"Prishtina","country":"XK","size":3,"weight":117.87,"departures":0,"x":1087.9,"y":1134.2},{"iata":"SUF","name":"Lamezia Terme Sant'Eufemia International Airport","city":"Lamezia Terme (CZ)","country":"IT","size":3,"weight":116.44,"departures":0,"x":989.7,"y":1233.5},{"iata":"ZAD","name":"Zadar Airport","city":"Zadar","country":"HR","size":3,"weight":116.36,"departures":0,"x":971.4,"y":1091.2},{"iata":"IVL","name":"Ivalo Airport","city":"Ivalo","country":"FI","size":3,"weight":116.3,"departures":0,"x":1218.6,"y":142.3},{"iata":"RVN","name":"Rovaniemi Airport","city":"Rovaniemi","country":"FI","size":3,"weight":115.52,"departures":0,"x":1186.3,"y":252.4},{"iata":"KVA","name":"Kavala Alexander the Great International Airport","city":"Kavala","country":"GR","size":3,"weight":115.42,"departures":0,"x":1161.4,"y":1179.8},{"iata":"BRI","name":"Bari Karol Wojtyła International Airport","city":"Bari","country":"IT","size":3,"weight":115.4,"departures":0,"x":1000.2,"y":1173.7},{"iata":"TRS","name":"Trieste Airport","city":"Ronchi dei Legionari/Trieste","country":"IT","size":3,"weight":115.4,"departures":0,"x":932.6,"y":1041},{"iata":"TIA","name":"Tirana International Airport Mother Teresa","city":"Rinas","country":"AL","size":3,"weight":115.4,"departures":0,"x":1060.9,"y":1166.2},{"iata":"EIN","name":"Eindhoven Airport","city":"Eindhoven","country":"NL","size":3,"weight":115.4,"departures":0,"x":766.7,"y":866.2},{"iata":"GZT","name":"Gaziantep Oğuzeli International Airport","city":"Gaziantep","country":"TR","size":3,"weight":115.38,"departures":0,"x":1425.2,"y":1284.5},{"iata":"RMU","name":"Region of Murcia International Airport","city":"Corvera","country":"ES","size":3,"weight":115.38,"departures":0,"x":633.3,"y":1262.4},{"iata":"NAV","name":"Nevşehir Kapadokya Airport","city":"Nevşehir","country":"TR","size":3,"weight":115.38,"departures":0,"x":1364.8,"y":1237},{"iata":"EDO","name":"Balıkesir Koca Seyit Airport","city":"Edremit","country":"TR","size":3,"weight":115.38,"departures":0,"x":1210.5,"y":1216.4},{"iata":"DLM","name":"Dalaman International Airport","city":"Dalaman","country":"TR","size":3,"weight":115.38,"departures":0,"x":1247,"y":1290.5},{"iata":"ALC","name":"Alicante-Elche Miguel Hernández Airport","city":"Alicante","country":"ES","size":3,"weight":115.38,"departures":0,"x":645,"y":1249.9},{"iata":"ASR","name":"Kayseri Erkilet International Airport","city":"Kayseri","country":"TR","size":3,"weight":115.37,"departures":0,"x":1384.5,"y":1237.1},{"iata":"RMI","name":"Federico Fellini International Airport","city":"Rimini (RN)","country":"IT","size":3,"weight":115.12,"departures":0,"x":915.1,"y":1093.4},{"iata":"LCA","name":"Larnaca International Airport","city":"Larnaca","country":"CY","size":3,"weight":115.03,"departures":0,"x":1346.2,"y":1336.9},{"iata":"BGO","name":"Bergen Airport, Flesland","city":"Bergen","country":"NO","size":3,"weight":114.78,"departures":0,"x":763.4,"y":541.2},{"iata":"FKB","name":"Karlsruhe Baden-Baden Airport","city":"Rheinmünster","country":"DE","size":3,"weight":114.35,"departures":0,"x":822.2,"y":951.7},{"iata":"SKP","name":"Skopje International Airport","city":"Ilinden","country":"MK","size":3,"weight":112.32,"departures":0,"x":1100,"y":1151.2},{"iata":"PUY","name":"Pula Airport","city":"Pula","country":"HR","size":3,"weight":112.32,"departures":0,"x":942,"y":1068.3},{"iata":"BVA","name":"Beauvais-Tillé airport","city":"Beauvais","country":"FR","size":3,"weight":111.19,"departures":0,"x":699.7,"y":930.6},{"iata":"GOA","name":"Genoa Cristoforo Colombo Airport","city":"Genova (GE)","country":"IT","size":3,"weight":110.21,"departures":0,"x":837.8,"y":1082.2},{"iata":"NTE","name":"Nantes Atlantique Airport","city":"Nantes","country":"FR","size":3,"weight":109.29,"departures":0,"x":623.4,"y":1001.5},{"iata":"EMA","name":"East Midlands Airport","city":"Nottingham, Leicestershire","country":"GB","size":3,"weight":108.94,"departures":0,"x":629.2,"y":820.1},{"iata":"DRS","name":"Dresden Airport","city":"Dresden","country":"DE","size":3,"weight":106.29,"departures":0,"x":938.8,"y":876.6},{"iata":"FDH","name":"Bodensee Airport Friedrichshafen","city":"Friedrichshafen","country":"DE","size":3,"weight":105.81,"departures":0,"x":851.5,"y":985.8},{"iata":"GHV","name":"Brașov-Ghimbav International Airport","city":"Brașov (Ghimbav)","country":"RO","size":3,"weight":104.52,"departures":0,"x":1180,"y":1044.6},{"iata":"EVE","name":"Harstad/Narvik Airport","city":"Evenes","country":"NO","size":3,"weight":104.23,"departures":0,"x":998.5,"y":148.8},{"iata":"TRF","name":"Sandefjord Airport, Torp","city":"Sandefjord(Torp)","country":"NO","size":3,"weight":103.87,"departures":0,"x":866.8,"y":586.2},{"iata":"BLQ","name":"Bologna Guglielmo Marconi Airport","city":"Bologna","country":"IT","size":3,"weight":103.51,"departures":0,"x":888,"y":1078.6},{"iata":"CAG","name":"Cagliari Elmas Airport","city":"Cagliari","country":"IT","size":3,"weight":103.51,"departures":0,"x":842.1,"y":1224.4},{"iata":"IBZ","name":"Ibiza Airport","city":"Ibiza (Eivissa)","country":"ES","size":3,"weight":103.33,"departures":0,"x":684.6,"y":1234.4},{"iata":"GDN","name":"Gdańsk Lech Wałęsa Airport","city":"Gdańsk","country":"PL","size":3,"weight":103.33,"departures":0,"x":1035.2,"y":766.6},{"iata":"KUO","name":"Kuopio Airport","city":"Kuopio / Siilinjärvi","country":"FI","size":3,"weight":103.33,"departures":0,"x":1226.6,"y":423.9},{"iata":"BOO","name":"Bodø Airport","city":"Bodø","country":"NO","size":3,"weight":102.99,"departures":0,"x":951.1,"y":215.4},{"iata":"FNC","name":"Cristiano Ronaldo International Airport","city":"Funchal","country":"PT","size":3,"weight":101.96,"departures":0,"x":312.3,"y":1390.7},{"iata":"TRD","name":"Trondheim Airport, Værnes","city":"Trondheim","country":"NO","size":3,"weight":100.93,"departures":0,"x":880.5,"y":403.3},{"iata":"SZG","name":"Salzburg Airport","city":"Salzburg","country":"AT","size":3,"weight":100.39,"departures":0,"x":923.2,"y":982.1},{"iata":"MST","name":"Maastricht Aachen Airport","city":"Maastricht","country":"NL","size":3,"weight":100.39,"departures":0,"x":774.8,"y":883.9},{"iata":"OLB","name":"Olbia Costa Smeralda Airport","city":"Olbia (SS)","country":"IT","size":3,"weight":100.11,"departures":0,"x":851.7,"y":1180.2},{"iata":"NUE","name":"Nuremberg Airport","city":"Nuremberg","country":"DE","size":3,"weight":97.49,"departures":0,"x":883.7,"y":929.2},{"iata":"AEY","name":"Akureyri International Airport","city":"Akureyri","country":"IS","size":3,"weight":97.49,"departures":0,"x":285.7,"y":298.3},{"iata":"TMP","name":"Tampere-Pirkkala Airport","city":"Tampere / Pirkkala","country":"FI","size":3,"weight":97.49,"departures":0,"x":1140.6,"y":494},{"iata":"PFO","name":"Paphos International Airport","city":"Paphos","country":"CY","size":3,"weight":97.49,"departures":0,"x":1322.8,"y":1340.9},{"iata":"VLC","name":"Valencia Airport","city":"Valencia","country":"ES","size":3,"weight":97.49,"departures":0,"x":646.5,"y":1218.1},{"iata":"GLA","name":"Glasgow Airport","city":"Glasgow","country":"GB","size":3,"weight":95.24,"departures":0,"x":565.5,"y":713},{"iata":"VAA","name":"Vaasa Airport","city":"Vaasa","country":"FI","size":3,"weight":95.19,"departures":0,"x":1102.8,"y":421.9},{"iata":"SJJ","name":"Sarajevo International Airport","city":"Sarajevo","country":"BA","size":3,"weight":94.13,"departures":0,"x":1032.4,"y":1099},{"iata":"SBZ","name":"Sibiu International Airport","city":"Sibiu","country":"RO","size":3,"weight":93.49,"departures":0,"x":1150.5,"y":1042.3},{"iata":"FMM","name":"Memmingen Allgau Airport","city":"Memmingen","country":"DE","size":3,"weight":93.49,"departures":0,"x":866.4,"y":976.2},{"iata":"NAP","name":"Naples International Airport","city":"Napoli","country":"IT","size":3,"weight":93.37,"departures":0,"x":949.6,"y":1180.6},{"iata":"BQT","name":"Brest International Airport","city":"Brest","country":"BY","size":3,"weight":92.92,"departures":0,"x":1146.6,"y":844.4},{"iata":"ERF","name":"Erfurt-Weimar Airport","city":"Erfurt","country":"DE","size":3,"weight":91.78,"departures":0,"x":881.2,"y":881.7},{"iata":"VST","name":"Stockholm Västerås Airport","city":"Stockholm / Västerås","country":"SE","size":3,"weight":90.71,"departures":0,"x":997.6,"y":570},{"iata":"ORK","name":"Cork International Airport","city":"Cork","country":"IE","size":3,"weight":90.26,"departures":0,"x":482.2,"y":853.3},{"iata":"EDI","name":"Edinburgh Airport","city":"Ingliston, Edinburgh","country":"GB","size":2,"weight":89.41,"departures":0,"x":587.2,"y":710.1},{"iata":"KRK","name":"Kraków John Paul II International Airport","city":"Balice","country":"PL","size":2,"weight":88.97,"departures":0,"x":1062.3,"y":910.8},{"iata":"OHD","name":"Ohrid St. Paul the Apostle Airport","city":"Ohrid","country":"MK","size":2,"weight":88.97,"departures":0,"x":1081.9,"y":1172.6},{"iata":"SPU","name":"Split Saint Jerome Airport","city":"Split","country":"HR","size":2,"weight":88.97,"departures":0,"x":990.7,"y":1107.1},{"iata":"MAH","name":"Menorca Airport","city":"Mahón (Maó)","country":"ES","size":2,"weight":88.97,"departures":0,"x":742.9,"y":1208.1},{"iata":"IOM","name":"Isle of Man Airport","city":"Castletown","country":"IM","size":2,"weight":88.72,"departures":0,"x":561.6,"y":776.9},{"iata":"LUZ","name":"Lublin Airport","city":"Lublin","country":"PL","size":2,"weight":87.31,"departures":0,"x":1122.3,"y":873.1},{"iata":"OMR","name":"Oradea International Airport","city":"Oradea","country":"RO","size":2,"weight":87.29,"departures":0,"x":1105.7,"y":1005.4},{"iata":"BIA","name":"Bastia-Poretta International airport","city":"Bastia","country":"FR","size":2,"weight":87.27,"departures":0,"x":850.9,"y":1134.8},{"iata":"AOE","name":"Hasan Polatkan Airport","city":"Eskişehir","country":"TR","size":2,"weight":87.19,"departures":0,"x":1282.4,"y":1209.5},{"iata":"VAR","name":"Varna Airport","city":"Varna","country":"BG","size":2,"weight":87.14,"departures":0,"x":1227.2,"y":1115.7},{"iata":"VNO","name":"Vilnius International Airport","city":"Vilnius","country":"LT","size":2,"weight":87.02,"departures":0,"x":1175.1,"y":757.6},{"iata":"POZ","name":"Poznań-Ławica Airport","city":"Poznań","country":"PL","size":2,"weight":86.41,"departures":0,"x":1001.5,"y":833.9},{"iata":"WRO","name":"Copernicus Wrocław Airport","city":"Wrocław","country":"PL","size":2,"weight":86.36,"departures":0,"x":1002.7,"y":877.6},{"iata":"KRN","name":"Kiruna Airport","city":"Kiruna","country":"SE","size":2,"weight":86.31,"departures":0,"x":1073.6,"y":185.7},{"iata":"OUL","name":"Oulu Airport","city":"Oulu / Oulunsalo","country":"FI","size":2,"weight":86.25,"departures":0,"x":1176.5,"y":334},{"iata":"BCM","name":"Bacău George Enescu International  Airport","city":"Bacău","country":"RO","size":2,"weight":86.21,"departures":0,"x":1208.4,"y":1020.5},{"iata":"PED","name":"Pardubice Airport","city":"Pardubice","country":"CZ","size":2,"weight":86.21,"departures":0,"x":979.3,"y":912.8},{"iata":"CRA","name":"Craiova International Airport","city":"Craiova","country":"RO","size":2,"weight":86.21,"departures":0,"x":1146.4,"y":1084.9},{"iata":"TKU","name":"Turku Airport","city":"Turku","country":"FI","size":2,"weight":86.2,"departures":0,"x":1113.1,"y":532},{"iata":"LCJ","name":"Łódź Władysław Reymont Airport","city":"Łódź","country":"PL","size":2,"weight":86.2,"departures":0,"x":1054.3,"y":857.3},{"iata":"WMI","name":"Warsaw Modlin Airport","city":"Nowy Dwór Mazowiecki","country":"PL","size":2,"weight":86.2,"departures":0,"x":1080,"y":832.9},{"iata":"LPP","name":"Lappeenranta Airport","city":"Lappeenranta","country":"FI","size":2,"weight":86.2,"departures":0,"x":1233.7,"y":509.7},{"iata":"KTT","name":"Kittilä International Airport","city":"Kittilä","country":"FI","size":2,"weight":86.2,"departures":0,"x":1166.1,"y":192.3},{"iata":"KSF","name":"Kassel Airport","city":"Calden","country":"DE","size":2,"weight":86.2,"departures":0,"x":849.1,"y":867.3},{"iata":"BNX","name":"Banja Luka International Airport","city":"Mahovljani","country":"BA","size":2,"weight":86.2,"departures":0,"x":1011.2,"y":1066.9},{"iata":"JCL","name":"České Budějovice South Bohemian Airport","city":"České Budějovice","country":"CZ","size":2,"weight":86.2,"departures":0,"x":952.4,"y":946.4},{"iata":"INI","name":"Niš Constantine the Great Airport","city":"Niš","country":"RS","size":2,"weight":86.2,"departures":0,"x":1104.7,"y":1112.8},{"iata":"PDV","name":"Plovdiv International Airport","city":"Plovdiv","country":"BG","size":2,"weight":86.2,"departures":0,"x":1166.2,"y":1148.2},{"iata":"TGD","name":"Podgorica Airport / Podgorica Golubovci Airbase","city":"Podgorica","country":"ME","size":2,"weight":86.2,"departures":0,"x":1051.3,"y":1140.1},{"iata":"SZZ","name":"Solidarity Szczecin–Goleniów Airport","city":"Szczecin(Glewice)","country":"PL","size":2,"weight":86.2,"departures":0,"x":962.1,"y":794.3},{"iata":"GRQ","name":"Groningen Airport Eelde","city":"Groningen","country":"NL","size":2,"weight":86.2,"departures":0,"x":791.3,"y":810.3},{"iata":"SCR","name":"Scandinavian Mountains Airport","city":"Malung-Sälen","country":"SE","size":2,"weight":86.2,"departures":0,"x":919.7,"y":504.6},{"iata":"DEB","name":"Debrecen International Airport","city":"Debrecen","country":"HU","size":2,"weight":86.09,"departures":0,"x":1099.8,"y":991.4},{"iata":"PDL","name":"João Paulo II Airport","city":"Ponta Delgada","country":"PT","size":2,"weight":86.03,"departures":0,"x":129.3,"y":1264},{"iata":"FAO","name":"Faro - Gago Coutinho International Airport","city":"Faro","country":"PT","size":2,"weight":85.64,"departures":0,"x":492.9,"y":1282.7},{"iata":"RJK","name":"Rijeka Airport","city":"Rijeka(Omišalj)","country":"HR","size":2,"weight":85.56,"departures":0,"x":955.3,"y":1058.9},{"iata":"TZL","name":"Tuzla International Airport","city":"Dubrave Gornje","country":"BA","size":2,"weight":85.36,"departures":0,"x":1040.5,"y":1080.8},{"iata":"FSC","name":"Figari Sud-Corse Airport","city":"Figari","country":"FR","size":2,"weight":85.09,"departures":0,"x":843,"y":1163.8},{"iata":"SCV","name":"Suceava Ștefan cel Mare International Airport","city":"Suceava","country":"RO","size":2,"weight":83.99,"departures":0,"x":1197,"y":985.3},{"iata":"REU","name":"Reus Airport","city":"Reus","country":"ES","size":2,"weight":83.72,"departures":0,"x":680.4,"y":1173.5},{"iata":"TOS","name":"Tromsø Airport","city":"Tromsø","country":"NO","size":2,"weight":83.5,"departures":0,"x":1044.5,"y":80.3},{"iata":"LIN","name":"Milano Linate Airport","city":"Segrate (MI)","country":"IT","size":2,"weight":83.02,"departures":0,"x":846.7,"y":1052.3},{"iata":"NRN","name":"Weeze (Niederrhein) Airport","city":"Weeze","country":"DE","size":2,"weight":82.91,"departures":0,"x":782.4,"y":861.3},{"iata":"CTA","name":"Catania-Fontanarossa Airport","city":"Catania","country":"IT","size":2,"weight":82.64,"departures":0,"x":965.5,"y":1271.1},{"iata":"TSF","name":"Treviso Airport","city":"Treviso (TV)","country":"IT","size":2,"weight":81.85,"departures":0,"x":906.6,"y":1046.3},{"iata":"PSR","name":"Abruzzo Airport","city":"Pescara","country":"IT","size":2,"weight":81.72,"departures":0,"x":947.3,"y":1138.1},{"iata":"INN","name":"Innsbruck Airport","city":"Innsbruck","country":"AT","size":2,"weight":81.43,"departures":0,"x":889.1,"y":998.3},{"iata":"VBY","name":"Visby Airport","city":"Visby","country":"SE","size":2,"weight":81.43,"departures":0,"x":1032.7,"y":646},{"iata":"SXB","name":"Strasbourg Airport","city":"Strasbourg","country":"FR","size":2,"weight":80.75,"departures":0,"x":812.9,"y":959.2},{"iata":"IAS","name":"Iaşi International Airport","city":"Iaşi","country":"RO","size":2,"weight":80.75,"departures":0,"x":1223,"y":1000.7},{"iata":"GRO","name":"Girona-Costa Brava Airport","city":"Girona","country":"ES","size":2,"weight":80.75,"departures":0,"x":713.1,"y":1152.7},{"iata":"OMO","name":"Mostar International Airport","city":"Mostar","country":"BA","size":2,"weight":80.75,"departures":0,"x":1022.5,"y":1114.3},{"iata":"ACE","name":"César Manrique-Lanzarote Airport","city":"San Bartolomé","country":"ES","size":2,"weight":80.75,"departures":0,"x":377.3,"y":1480.3},{"iata":"KGS","name":"Kos International Airport \"Ippokratis\"","city":"Kos Island","country":"GR","size":2,"weight":80.21,"departures":0,"x":1212.1,"y":1288.4},{"iata":"CFU","name":"Corfu Ioannis Kapodistrias International Airport","city":"Kerkyra (Corfu)","country":"GR","size":2,"weight":79.41,"departures":0,"x":1064.9,"y":1215.1},{"iata":"CWL","name":"Cardiff International Airport","city":"Cardiff","country":"GB","size":2,"weight":78.28,"departures":0,"x":587.8,"y":868},{"iata":"NCL","name":"Newcastle International Airport","city":"Newcastle upon Tyne, Tyne and Wear","country":"GB","size":2,"weight":77.01,"departures":0,"x":621.8,"y":743.2},{"iata":"AES","name":"Ålesund Airport","city":"Ålesund","country":"NO","size":2,"weight":76.17,"departures":0,"x":781.8,"y":443.9},{"iata":"UME","name":"Umeå Airport","city":"Umeå","country":"SE","size":2,"weight":75.51,"departures":0,"x":1072.5,"y":387.9},{"iata":"NOC","name":"Ireland West Airport Knock","city":"Charlestown","country":"IE","size":2,"weight":75.43,"departures":0,"x":475.5,"y":783},{"iata":"KRP","name":"Midtjyllands Airport / Air Base Karup","city":"Karup","country":"DK","size":2,"weight":75.37,"departures":0,"x":843.2,"y":697.4},{"iata":"LPL","name":"Liverpool John Lennon Airport","city":"Liverpool","country":"GB","size":2,"weight":74.65,"departures":0,"x":598,"y":802.9},{"iata":"PLQ","name":"Palanga International Airport","city":"Palanga","country":"LT","size":2,"weight":74.38,"departures":0,"x":1089.1,"y":709.3},{"iata":"ERZ","name":"Erzurum International Airport","city":"Erzurum","country":"TR","size":2,"weight":73.07,"departures":0,"x":1500.9,"y":1205.6},{"iata":"LBA","name":"Leeds Bradford Airport","city":"Leeds, West Yorkshire","country":"GB","size":2,"weight":72.81,"departures":0,"x":622.3,"y":784.5},{"iata":"ODE","name":"Odense Hans Christian Andersen Airport","city":"Odense","country":"DK","size":2,"weight":71.56,"departures":0,"x":868.3,"y":727.4},{"iata":"CIA","name":"Ciampino–G. B. Pastine International Airport","city":"Rome","country":"IT","size":2,"weight":70.38,"departures":0,"x":914.8,"y":1155.6},{"iata":"RTM","name":"Rotterdam The Hague Airport","city":"Rotterdam","country":"NL","size":2,"weight":70.26,"departures":0,"x":747.4,"y":849.5},{"iata":"OVD","name":"Asturias Airport","city":"Ranón","country":"ES","size":2,"weight":70.26,"departures":0,"x":532.6,"y":1106.4},{"iata":"PEG","name":"Perugia San Francesco d'Assisi – Umbria International Airport","city":"Perugia (PG)","country":"IT","size":2,"weight":70.21,"departures":0,"x":913.1,"y":1119.6},{"iata":"JTR","name":"Santorini International Airport","city":"Santorini Island","country":"GR","size":2,"weight":70.1,"departures":0,"x":1179,"y":1298.5},{"iata":"LGG","name":"Liège Airport","city":"Grâce-Hollogne","country":"BE","size":2,"weight":69.42,"departures":0,"x":768.1,"y":892.7},{"iata":"PAD","name":"Paderborn Lippstadt Airport","city":"Büren","country":"DE","size":2,"weight":69.23,"departures":0,"x":833.2,"y":860.9},{"iata":"FMO","name":"Münster Osnabrück Airport","city":"Greven","country":"DE","size":2,"weight":68.72,"departures":0,"x":814.1,"y":843.6},{"iata":"LTN","name":"London Luton Airport","city":"Luton, Luton","country":"GB","size":2,"weight":68.32,"departures":0,"x":648.9,"y":852.2},{"iata":"KLV","name":"Karlovy Vary Airport","city":"Karlovy Vary","country":"CZ","size":2,"weight":67.72,"departures":0,"x":921.3,"y":906.7},{"iata":"LPI","name":"Linköping City Airport","city":"Linköping","country":"SE","size":2,"weight":66.95,"departures":0,"x":978.1,"y":617.2},{"iata":"DIY","name":"Diyarbakır Airport","city":"Diyarbakır","country":"TR","size":2,"weight":65.23,"departures":0,"x":1481,"y":1260},{"iata":"CLJ","name":"Avram Iancu Cluj International Airport","city":"Cluj-Napoca","country":"RO","size":2,"weight":62.26,"departures":0,"x":1142.3,"y":1012.6},{"iata":"KRS","name":"Kristiansand Airport","city":"Kristiansand(Kjevik)","country":"NO","size":2,"weight":62.02,"departures":0,"x":822.3,"y":625},{"iata":"BRS","name":"Bristol Airport","city":"Bristol","country":"GB","size":2,"weight":60.85,"departures":0,"x":600.7,"y":868.5},{"iata":"DTM","name":"Dortmund Airport","city":"Dortmund","country":"DE","size":2,"weight":60.32,"departures":0,"x":812.6,"y":864},{"iata":"ABZ","name":"Aberdeen International Airport","city":"Aberdeen","country":"GB","size":2,"weight":58.06,"departures":0,"x":611.3,"y":663.5},{"iata":"XCR","name":"Chalons Vatry airport","city":"Chalons en Champagne","country":"FR","size":2,"weight":55.27,"departures":0,"x":742.7,"y":951.9},{"iata":"VAS","name":"Sivas Nuri Demirağ Airport","city":"Sivas","country":"TR","size":2,"weight":54.15,"departures":0,"x":1413.4,"y":1209.4},{"iata":"GIB","name":"Gibraltar Airport","city":"Gibraltar","country":"GI","size":2,"weight":52.27,"departures":0,"x":546.7,"y":1304.8},{"iata":"FAE","name":"Vágar Airport","city":"Vágar","country":"FO","size":2,"weight":50.95,"departures":0,"x":507.2,"y":465.9},{"iata":"TAT","name":"Poprad-Tatry Airport","city":"Poprad","country":"SK","size":2,"weight":49.93,"departures":0,"x":1071.6,"y":942.6},{"iata":"VLL","name":"Valladolid Airport","city":"Valladolid","country":"ES","size":2,"weight":49.85,"departures":0,"x":556.9,"y":1158.2},{"iata":"KLX","name":"Kalamata Airport","city":"Kalamata","country":"GR","size":2,"weight":49.85,"departures":0,"x":1108.2,"y":1281.3},{"iata":"YEI","name":"Bursa Yenişehir Airport","city":"Yenişehir","country":"TR","size":2,"weight":49.65,"departures":0,"x":1262.8,"y":1197.6},{"iata":"MSR","name":"Muş Airport","city":"Muş","country":"TR","size":2,"weight":48.35,"departures":0,"x":1511,"y":1237.7},{"iata":"VIT","name":"Vitoria Airport","city":"Alava","country":"ES","size":2,"weight":47.26,"departures":0,"x":600.5,"y":1125.5},{"iata":"KSY","name":"Kars Airport","city":"Kars","country":"TR","size":2,"weight":47.26,"departures":0,"x":1540.8,"y":1189.3},{"iata":"FLR","name":"Florence Airport, Peretola","city":"Firenze (FI)","country":"IT","size":2,"weight":45,"departures":0,"x":886.2,"y":1099.4},{"iata":"PEV","name":"Pécs-Pogány International Airport","city":"Pécs","country":"HU","size":2,"weight":45,"departures":0,"x":1030.6,"y":1036.3},{"iata":"GPA","name":"Patras Araxos Agamemnon Airport","city":"Patras","country":"GR","size":1,"weight":44.1,"departures":0,"x":1095.9,"y":1253.3},{"iata":"MLX","name":"Malatya Erhaç Airport","city":"Malatya","country":"TR","size":1,"weight":44.05,"departures":0,"x":1437.8,"y":1245.9},{"iata":"TER","name":"Lajes Airport","city":"Praia da Vitória","country":"PT","size":1,"weight":43.28,"departures":0,"x":100.7,"y":1237.3},{"iata":"OLA","name":"Ørland Airport","city":"Ørland","country":"NO","size":1,"weight":42.55,"departures":0,"x":853.4,"y":392.2},{"iata":"ORB","name":"Örebro Airport","city":"Örebro","country":"SE","size":1,"weight":42.38,"departures":0,"x":964.9,"y":584.8},{"iata":"TJK","name":"Tokat Airport","city":"Tokat","country":"TR","size":1,"weight":42.11,"departures":0,"x":1402.9,"y":1195.7},{"iata":"HDF","name":"Heringsdorf Airport","city":"Zirchow","country":"DE","size":1,"weight":41.17,"departures":0,"x":946.7,"y":784.1},{"iata":"LEI","name":"Almería Airport","city":"Almería","country":"ES","size":1,"weight":40.94,"departures":0,"x":607.8,"y":1287.1},{"iata":"YKO","name":"Hakkari Yüksekova Airport","city":"Hakkari","country":"TR","size":1,"weight":40.94,"departures":0,"x":1563.9,"y":1268.9},{"iata":"BRQ","name":"Brno-Tuřany Airport","city":"Brno","country":"CZ","size":1,"weight":40.87,"departures":0,"x":998.9,"y":940.1},{"iata":"KSC","name":"Košice International Airport","city":"Košice","country":"SK","size":1,"weight":38.92,"departures":0,"x":1092.1,"y":955.3},{"iata":"GNB","name":"Grenoble Alpes Isère Airport","city":"Grenoble","country":"FR","size":1,"weight":37.92,"departures":0,"x":765.7,"y":1054.7},{"iata":"SMA","name":"Santa Maria Airport","city":"Vila do Porto","country":"PT","size":1,"weight":37.88,"departures":0,"x":140.1,"y":1283.8},{"iata":"BAL","name":"Batman Airport","city":"Batman","country":"TR","size":1,"weight":37.88,"departures":0,"x":1499.8,"y":1259.1},{"iata":"KSD","name":"Karlstad Airport","city":"Karlstad","country":"SE","size":1,"weight":37.62,"departures":0,"x":930,"y":575.9},{"iata":"SLM","name":"Salamanca Airport","city":"Salamanca","country":"ES","size":1,"weight":37.55,"departures":0,"x":543.5,"y":1178.8},{"iata":"MBX","name":"Maribor Edvard Rusjan Airport","city":"Maribor","country":"SI","size":1,"weight":37.24,"departures":0,"x":978.2,"y":1021.7},{"iata":"PGF","name":"Perpignan-Rivesaltes (Llabanère) Airport","city":"Perpignan/Rivesaltes","country":"FR","size":1,"weight":37.24,"departures":0,"x":715.3,"y":1129.5},{"iata":"JOE","name":"Joensuu Airport","city":"Joensuu","country":"FI","size":1,"weight":37.24,"departures":0,"x":1264,"y":439.5},{"iata":"KOK","name":"Kokkola-Pietarsaari Airport","city":"Kokkola / Kruunupyy","country":"FI","size":1,"weight":37.24,"departures":0,"x":1131.1,"y":391.2},{"iata":"PXO","name":"Porto Santo Airport","city":"Vila Baleira","country":"PT","size":1,"weight":37.04,"departures":0,"x":321,"y":1381.5},{"iata":"OGU","name":"Ordu–Giresun Airport","city":"Ordu","country":"TR","size":1,"weight":36.96,"departures":0,"x":1437.7,"y":1178.4},{"iata":"KZR","name":"Zafer Airport","city":"Altıntaş","country":"TR","size":1,"weight":36.93,"departures":0,"x":1274.5,"y":1228.1},{"iata":"EZS","name":"Elazığ Airport","city":"Elazığ","country":"TR","size":1,"weight":36.93,"departures":0,"x":1462.2,"y":1241.6},{"iata":"LDE","name":"Tarbes-Lourdes-Pyrénées Airport","city":"Tarbes/Lourdes/Pyrénées","country":"FR","size":1,"weight":36.93,"departures":0,"x":656.3,"y":1117.2},{"iata":"LEN","name":"León Airport","city":"La Virgen del Camino","country":"ES","size":1,"weight":36.93,"departures":0,"x":540.4,"y":1133.7},{"iata":"TEQ","name":"Tekirdağ Çorlu Airport","city":"Çorlu","country":"TR","size":1,"weight":36.93,"departures":0,"x":1229.1,"y":1173.7},{"iata":"AHO","name":"Alghero-Fertilia Airport","city":"Alghero","country":"IT","size":1,"weight":36.93,"departures":0,"x":826.5,"y":1187.4}],"routes":[{"airline":"Madrid Express","x1":583.1,"y1":1191.2,"x2":372,"y2":1491.9},{"airline":"Madrid Express","x1":372,"y1":1491.9,"x2":583.1,"y2":1191.2},{"airline":"Madrid Express","x1":583.1,"y1":1191.2,"x2":924.9,"y2":1252.7},{"airline":"Madrid Express","x1":924.9,"y1":1252.7,"x2":583.1,"y2":1191.2},{"airline":"Madrid Express","x1":583.1,"y1":1191.2,"x2":804.4,"y2":1103.7},{"airline":"Madrid Express","x1":804.4,"y1":1103.7,"x2":583.1,"y2":1191.2},{"airline":"Madrid Express","x1":583.1,"y1":1191.2,"x2":478.3,"y2":1170.7},{"airline":"Madrid Express","x1":478.3,"y1":1170.7,"x2":583.1,"y2":1191.2},{"airline":"Madrid Express","x1":583.1,"y1":1191.2,"x2":953.7,"y2":1312.5},{"airline":"Madrid Express","x1":953.7,"y1":1312.5,"x2":583.1,"y2":1191.2},{"airline":"Madrid Express","x1":583.1,"y1":1191.2,"x2":763.3,"y2":1109.9},{"airline":"Madrid Express","x1":763.3,"y1":1109.9,"x2":583.1,"y2":1191.2},{"airline":"Madrid Express","x1":583.1,"y1":1191.2,"x2":340.8,"y2":1504},{"airline":"Madrid Express","x1":340.8,"y1":1504,"x2":583.1,"y2":1191.2},{"airline":"Madrid Express","x1":583.1,"y1":1191.2,"x2":712.6,"y2":1216.4},{"airline":"Madrid Express","x1":712.6,"y1":1216.4,"x2":583.1,"y2":1191.2},{"airline":"Paris Airways","x1":708.8,"y1":944.5,"x2":340.8,"y2":1504},{"airline":"Paris Airways","x1":340.8,"y1":1504,"x2":708.8,"y2":944.5},{"airline":"Paris Airways","x1":708.8,"y1":944.5,"x2":953.7,"y2":1312.5},{"airline":"Paris Airways","x1":953.7,"y1":1312.5,"x2":708.8,"y2":944.5},{"airline":"Paris Airways","x1":708.8,"y1":944.5,"x2":535.5,"y2":1272.3},{"airline":"Paris Airways","x1":535.5,"y1":1272.3,"x2":708.8,"y2":944.5},{"airline":"Paris Airways","x1":708.8,"y1":944.5,"x2":924.9,"y2":1252.7},{"airline":"Paris Airways","x1":924.9,"y1":1252.7,"x2":708.8,"y2":944.5},{"airline":"Paris Airways","x1":708.8,"y1":944.5,"x2":564.1,"y2":1291.4},{"airline":"Paris Airways","x1":564.1,"y1":1291.4,"x2":708.8,"y2":944.5},{"airline":"Istanbul Connect","x1":1245.8,"y1":1170,"x2":813.3,"y2":1059.4},{"airline":"Istanbul Connect","x1":813.3,"y1":1059.4,"x2":1245.8,"y2":1170},{"airline":"Istanbul Connect","x1":1245.8,"y1":1170,"x2":804.4,"y2":1103.7},{"airline":"Istanbul Connect","x1":804.4,"y1":1103.7,"x2":1245.8,"y2":1170},{"airline":"Istanbul Connect","x1":1245.8,"y1":1170,"x2":855.6,"y2":1045.7},{"airline":"Istanbul Connect","x1":855.6,"y1":1045.7,"x2":1245.8,"y2":1170},{"airline":"Istanbul Connect","x1":1245.8,"y1":1170,"x2":869.6,"y2":1103},{"airline":"Istanbul Connect","x1":869.6,"y1":1103,"x2":1245.8,"y2":1170},{"airline":"Istanbul Connect","x1":1245.8,"y1":1170,"x2":950.5,"y2":1016.9},{"airline":"Istanbul Connect","x1":950.5,"y1":1016.9,"x2":1245.8,"y2":1170},{"airline":"Frankfurt Lines","x1":832,"y1":912.4,"x2":953.7,"y2":1312.5},{"airline":"Frankfurt Lines","x1":953.7,"y1":1312.5,"x2":832,"y2":912.4},{"airline":"Frankfurt Lines","x1":832,"y1":912.4,"x2":564.1,"y2":1291.4},{"airline":"Frankfurt Lines","x1":564.1,"y1":1291.4,"x2":832,"y2":912.4},{"airline":"Frankfurt Lines","x1":832,"y1":912.4,"x2":884.1,"y2":545.3},{"airline":"Frankfurt Lines","x1":884.1,"y1":545.3,"x2":832,"y2":912.4},{"airline":"Frankfurt Lines","x1":832,"y1":912.4,"x2":763.3,"y2":1109.9},{"airline":"Frankfurt Lines","x1":763.3,"y1":1109.9,"x2":832,"y2":912.4},{"airline":"Frankfurt Lines","x1":832,"y1":912.4,"x2":804.4,"y2":1103.7},{"airline":"Frankfurt Lines","x1":804.4,"y1":1103.7,"x2":832,"y2":912.4},{"airline":"Frankfurt Lines","x1":832,"y1":912.4,"x2":684.4,"y2":1104.5},{"airline":"Frankfurt Lines","x1":684.4,"y1":1104.5,"x2":832,"y2":912.4},{"airline":"Frankfurt Lines","x1":832,"y1":912.4,"x2":699,"y2":1169.4},{"airline":"Frankfurt Lines","x1":699,"y1":1169.4,"x2":832,"y2":912.4},{"airline":"Frankfurt Lines","x1":832,"y1":912.4,"x2":1024.2,"y2":567.6},{"airline":"Frankfurt Lines","x1":1024.2,"y1":567.6,"x2":832,"y2":912.4},{"airline":"Frankfurt Lines","x1":832,"y1":912.4,"x2":1009.5,"y2":970.6},{"airline":"Frankfurt Lines","x1":1009.5,"y1":970.6,"x2":832,"y2":912.4},{"airline":"Frankfurt Lines","x1":832,"y1":912.4,"x2":855.6,"y2":1045.7},{"airline":"Frankfurt Lines","x1":855.6,"y1":1045.7,"x2":832,"y2":912.4},{"airline":"Frankfurt Lines","x1":832,"y1":912.4,"x2":721.4,"y2":1042.2},{"airline":"Frankfurt Lines","x1":721.4,"y1":1042.2,"x2":832,"y2":912.4},{"airline":"Amsterdam Air","x1":754.1,"y1":837.7,"x2":953.7,"y2":1312.5},{"airline":"Amsterdam Air","x1":953.7,"y1":1312.5,"x2":754.1,"y2":837.7},{"airline":"Amsterdam Air","x1":754.1,"y1":837.7,"x2":712.6,"y2":1216.4},{"airline":"Amsterdam Air","x1":712.6,"y1":1216.4,"x2":754.1,"y2":837.7},{"airline":"Amsterdam Air","x1":754.1,"y1":837.7,"x2":804.4,"y2":1103.7},{"airline":"Amsterdam Air","x1":804.4,"y1":1103.7,"x2":754.1,"y2":837.7},{"airline":"Amsterdam Air","x1":754.1,"y1":837.7,"x2":763.3,"y2":1109.9},{"airline":"Amsterdam Air","x1":763.3,"y1":1109.9,"x2":754.1,"y2":837.7},{"airline":"Amsterdam Air","x1":754.1,"y1":837.7,"x2":996.3,"y2":972.4},{"airline":"Amsterdam Air","x1":996.3,"y1":972.4,"x2":754.1,"y2":837.7},{"airline":"Amsterdam Air","x1":754.1,"y1":837.7,"x2":884.1,"y2":545.3},{"airline":"Amsterdam Air","x1":884.1,"y1":545.3,"x2":754.1,"y2":837.7},{"airline":"Zurich Aviation","x1":831.8,"y1":992.3,"x2":1151.8,"y2":1320.5},{"airline":"Zurich Aviation","x1":1151.8,"y1":1320.5,"x2":831.8,"y2":992.3},{"airline":"Zurich Aviation","x1":831.8,"y1":992.3,"x2":535.5,"y2":1272.3},{"airline":"Zurich Aviation","x1":535.5,"y1":1272.3,"x2":831.8,"y2":992.3},{"airline":"Zurich Aviation","x1":831.8,"y1":992.3,"x2":1240.8,"y2":1083.6},{"airline":"Zurich Aviation","x1":1240.8,"y1":1083.6,"x2":831.8,"y2":992.3},{"airline":"Rome Jet","x1":907.7,"y1":1155.5,"x2":855.6,"y2":1045.7},{"airline":"Rome Jet","x1":855.6,"y1":1045.7,"x2":907.7,"y2":1155.5},{"airline":"Rome Jet","x1":907.7,"y1":1155.5,"x2":953.7,"y2":1312.5},{"airline":"Rome Jet","x1":953.7,"y1":1312.5,"x2":907.7,"y2":1155.5},{"airline":"Rome Jet","x1":907.7,"y1":1155.5,"x2":1024.6,"y2":1186.8},{"airline":"Rome Jet","x1":1024.6,"y1":1186.8,"x2":907.7,"y2":1155.5},{"airline":"Rome Jet","x1":907.7,"y1":1155.5,"x2":763.3,"y2":1109.9},{"airline":"Rome Jet","x1":763.3,"y1":1109.9,"x2":907.7,"y2":1155.5},{"airline":"Rome Jet","x1":907.7,"y1":1155.5,"x2":712.6,"y2":1216.4},{"airline":"Rome Jet","x1":712.6,"y1":1216.4,"x2":907.7,"y2":1155.5},{"airline":"Rome Jet","x1":907.7,"y1":1155.5,"x2":909.8,"y2":1050.5},{"airline":"Rome Jet","x1":909.8,"y1":1050.5,"x2":907.7,"y2":1155.5},{"airline":"Rome Jet","x1":907.7,"y1":1155.5,"x2":804.4,"y2":1103.7},{"airline":"Rome Jet","x1":804.4,"y1":1103.7,"x2":907.7,"y2":1155.5},{"airline":"Rome Jet","x1":907.7,"y1":1155.5,"x2":924.9,"y2":1252.7},{"airline":"Rome Jet","x1":924.9,"y1":1252.7,"x2":907.7,"y2":1155.5},{"airline":"Rome Jet","x1":907.7,"y1":1155.5,"x2":813.3,"y2":1059.4},{"airline":"Rome Jet","x1":813.3,"y1":1059.4,"x2":907.7,"y2":1155.5},{"airline":"Rome Jet","x1":907.7,"y1":1155.5,"x2":831.8,"y2":992.3},{"airline":"Rome Jet","x1":831.8,"y1":992.3,"x2":907.7,"y2":1155.5},{"airline":"Rome Jet","x1":907.7,"y1":1155.5,"x2":835.4,"y2":1046.8},{"airline":"Rome Jet","x1":835.4,"y1":1046.8,"x2":907.7,"y2":1155.5},{"airline":"Rome Jet","x1":907.7,"y1":1155.5,"x2":832,"y2":912.4},{"airline":"Rome Jet","x1":832,"y1":912.4,"x2":907.7,"y2":1155.5},{"airline":"Rome Jet","x1":907.7,"y1":1155.5,"x2":583.1,"y2":1191.2},{"airline":"Rome Jet","x1":583.1,"y1":1191.2,"x2":907.7,"y2":1155.5},{"airline":"Rome Jet","x1":907.7,"y1":1155.5,"x2":898.2,"y2":964.9},{"airline":"Rome Jet","x1":898.2,"y1":964.9,"x2":907.7,"y2":1155.5},{"airline":"Rome Jet","x1":907.7,"y1":1155.5,"x2":754.1,"y2":837.7},{"airline":"Rome Jet","x1":754.1,"y1":837.7,"x2":907.7,"y2":1155.5},{"airline":"Rome Jet","x1":907.7,"y1":1155.5,"x2":760.8,"y2":1044},{"airline":"Rome Jet","x1":760.8,"y1":1044,"x2":907.7,"y2":1155.5},{"airline":"Rome Jet","x1":907.7,"y1":1155.5,"x2":973.1,"y2":1006.4},{"airline":"Rome Jet","x1":973.1,"y1":1006.4,"x2":907.7,"y2":1155.5},{"airline":"Rome Jet","x1":907.7,"y1":1155.5,"x2":996.3,"y2":972.4},{"airline":"Rome Jet","x1":996.3,"y1":972.4,"x2":907.7,"y2":1155.5},{"airline":"Rome Jet","x1":907.7,"y1":1155.5,"x2":810.7,"y2":988},{"airline":"Rome Jet","x1":810.7,"y1":988,"x2":907.7,"y2":1155.5},{"airline":"Rome Jet","x1":907.7,"y1":1155.5,"x2":699,"y2":1169.4},{"airline":"Rome Jet","x1":699,"y1":1169.4,"x2":907.7,"y2":1155.5},{"airline":"Rome Jet","x1":907.7,"y1":1155.5,"x2":845.6,"y2":954.5},{"airline":"Rome Jet","x1":845.6,"y1":954.5,"x2":907.7,"y2":1155.5},{"airline":"Köln Express","x1":802.9,"y1":885.4,"x2":763.3,"y2":1109.9},{"airline":"Köln Express","x1":763.3,"y1":1109.9,"x2":802.9,"y2":885.4},{"airline":"Köln Express","x1":802.9,"y1":885.4,"x2":898.2,"y2":964.9},{"airline":"Köln Express","x1":898.2,"y1":964.9,"x2":802.9,"y2":885.4},{"airline":"Köln Express","x1":802.9,"y1":885.4,"x2":933.4,"y2":835.9},{"airline":"Köln Express","x1":933.4,"y1":835.9,"x2":802.9,"y2":885.4},{"airline":"Köln Express","x1":802.9,"y1":885.4,"x2":704.8,"y2":953.3},{"airline":"Köln Express","x1":704.8,"y1":953.3,"x2":802.9,"y2":885.4},{"airline":"Köln Express","x1":802.9,"y1":885.4,"x2":916,"y2":722.3},{"airline":"Köln Express","x1":916,"y1":722.3,"x2":802.9,"y2":885.4},{"airline":"Köln Express","x1":802.9,"y1":885.4,"x2":948.9,"y2":910},{"airline":"Köln Express","x1":948.9,"y1":910,"x2":802.9,"y2":885.4},{"airline":"Köln Express","x1":802.9,"y1":885.4,"x2":804.4,"y2":1103.7},{"airline":"Köln Express","x1":804.4,"y1":1103.7,"x2":802.9,"y2":885.4},{"airline":"Hannover Airways","x1":855.1,"y1":832.6,"x2":583.1,"y2":1191.2},{"airline":"Hannover Airways","x1":583.1,"y1":1191.2,"x2":855.1,"y2":832.6},{"airline":"Hannover Airways","x1":855.1,"y1":832.6,"x2":924.9,"y2":1252.7},{"airline":"Hannover Airways","x1":924.9,"y1":1252.7,"x2":855.1,"y2":832.6},{"airline":"Hannover Airways","x1":855.1,"y1":832.6,"x2":712.6,"y2":1216.4},{"airline":"Hannover Airways","x1":712.6,"y1":1216.4,"x2":855.1,"y2":832.6},{"airline":"Hannover Airways","x1":855.1,"y1":832.6,"x2":763.3,"y2":1109.9},{"airline":"Hannover Airways","x1":763.3,"y1":1109.9,"x2":855.1,"y2":832.6},{"airline":"Hannover Airways","x1":855.1,"y1":832.6,"x2":804.4,"y2":1103.7},{"airline":"Hannover Airways","x1":804.4,"y1":1103.7,"x2":855.1,"y2":832.6},{"airline":"Hannover Airways","x1":855.1,"y1":832.6,"x2":907.7,"y2":1155.5},{"airline":"Hannover Airways","x1":907.7,"y1":1155.5,"x2":855.1,"y2":832.6},{"airline":"Paris Connect","x1":704.8,"y1":953.3,"x2":1136.8,"y2":1130.8},{"airline":"Paris Connect","x1":1136.8,"y1":1130.8,"x2":704.8,"y2":953.3},{"airline":"Paris Connect","x1":704.8,"y1":953.3,"x2":953.7,"y2":1312.5},{"airline":"Paris Connect","x1":953.7,"y1":1312.5,"x2":704.8,"y2":953.3},{"airline":"Paris Connect","x1":704.8,"y1":953.3,"x2":1094.1,"y2":1041.6},{"airline":"Paris Connect","x1":1094.1,"y1":1041.6,"x2":704.8,"y2":953.3},{"airline":"Paris Connect","x1":704.8,"y1":953.3,"x2":535.5,"y2":1272.3},{"airline":"Paris Connect","x1":535.5,"y1":1272.3,"x2":704.8,"y2":953.3},{"airline":"Paris Connect","x1":704.8,"y1":953.3,"x2":1024.6,"y2":1186.8},{"airline":"Paris Connect","x1":1024.6,"y1":1186.8,"x2":704.8,"y2":953.3},{"airline":"Zaventem Lines","x1":748.4,"y1":884.2,"x2":583.1,"y2":1191.2},{"airline":"Zaventem Lines","x1":583.1,"y1":1191.2,"x2":748.4,"y2":884.2},{"airline":"Zaventem Lines","x1":748.4,"y1":884.2,"x2":916,"y2":722.3},{"airline":"Zaventem Lines","x1":916,"y1":722.3,"x2":748.4,"y2":884.2},{"airline":"Zaventem Lines","x1":748.4,"y1":884.2,"x2":933.4,"y2":835.9},{"airline":"Zaventem Lines","x1":933.4,"y1":835.9,"x2":748.4,"y2":884.2},{"airline":"Zaventem Lines","x1":748.4,"y1":884.2,"x2":907.3,"y2":867.2},{"airline":"Zaventem Lines","x1":907.3,"y1":867.2,"x2":748.4,"y2":884.2},{"airline":"Zaventem Lines","x1":748.4,"y1":884.2,"x2":924.9,"y2":1252.7},{"airline":"Zaventem Lines","x1":924.9,"y1":1252.7,"x2":748.4,"y2":884.2},{"airline":"Zaventem Lines","x1":748.4,"y1":884.2,"x2":898.2,"y2":964.9},{"airline":"Zaventem Lines","x1":898.2,"y1":964.9,"x2":748.4,"y2":884.2},{"airline":"Zaventem Lines","x1":748.4,"y1":884.2,"x2":760.8,"y2":1044},{"airline":"Zaventem Lines","x1":760.8,"y1":1044,"x2":748.4,"y2":884.2},{"airline":"Zaventem Lines","x1":748.4,"y1":884.2,"x2":907.7,"y2":1155.5},{"airline":"Zaventem Lines","x1":907.7,"y1":1155.5,"x2":748.4,"y2":884.2},{"airline":"Zaventem Lines","x1":748.4,"y1":884.2,"x2":831.8,"y2":992.3},{"airline":"Zaventem Lines","x1":831.8,"y1":992.3,"x2":748.4,"y2":884.2},{"airline":"Zaventem Lines","x1":748.4,"y1":884.2,"x2":810.7,"y2":988},{"airline":"Zaventem Lines","x1":810.7,"y1":988,"x2":748.4,"y2":884.2},{"airline":"Zaventem Lines","x1":748.4,"y1":884.2,"x2":845.6,"y2":954.5},{"airline":"Zaventem Lines","x1":845.6,"y1":954.5,"x2":748.4,"y2":884.2},{"airline":"Zaventem Lines","x1":748.4,"y1":884.2,"x2":855.1,"y2":832.6},{"airline":"Zaventem Lines","x1":855.1,"y1":832.6,"x2":748.4,"y2":884.2},{"airline":"Copenhagen Air","x1":916,"y1":722.3,"x2":763.3,"y2":1109.9},{"airline":"Copenhagen Air","x1":763.3,"y1":1109.9,"x2":916,"y2":722.3},{"airline":"Copenhagen Air","x1":916,"y1":722.3,"x2":884.1,"y2":545.3},{"airline":"Copenhagen Air","x1":884.1,"y1":545.3,"x2":916,"y2":722.3},{"airline":"Copenhagen Air","x1":916,"y1":722.3,"x2":708.8,"y2":944.5},{"airline":"Copenhagen Air","x1":708.8,"y1":944.5,"x2":916,"y2":722.3},{"airline":"Copenhagen Air","x1":916,"y1":722.3,"x2":831.8,"y2":992.3},{"airline":"Copenhagen Air","x1":831.8,"y1":992.3,"x2":916,"y2":722.3},{"airline":"Copenhagen Air","x1":916,"y1":722.3,"x2":898.2,"y2":964.9},{"airline":"Copenhagen Air","x1":898.2,"y1":964.9,"x2":916,"y2":722.3},{"airline":"Copenhagen Air","x1":916,"y1":722.3,"x2":832,"y2":912.4},{"airline":"Copenhagen Air","x1":832,"y1":912.4,"x2":916,"y2":722.3},{"airline":"Jasionka Aviation","x1":1108.2,"y1":909.7,"x2":1232.5,"y2":1298.3},{"airline":"Jasionka Aviation","x1":1232.5,"y1":1298.3,"x2":1108.2,"y2":909.7},{"airline":"Jasionka Aviation","x1":1108.2,"y1":909.7,"x2":772.1,"y2":598.6},{"airline":"Jasionka Aviation","x1":772.1,"y1":598.6,"x2":1108.2,"y2":909.7},{"airline":"Jasionka Aviation","x1":1108.2,"y1":909.7,"x2":1151.8,"y2":1320.5},{"airline":"Jasionka Aviation","x1":1151.8,"y1":1320.5,"x2":1108.2,"y2":909.7},{"airline":"Jasionka Aviation","x1":1108.2,"y1":909.7,"x2":720,"y2":895.1},{"airline":"Jasionka Aviation","x1":720,"y1":895.1,"x2":1108.2,"y2":909.7},{"airline":"Helsinki Jet","x1":1168.5,"y1":540.2,"x2":1024.2,"y2":567.6},{"airline":"Helsinki Jet","x1":1024.2,"y1":567.6,"x2":1168.5,"y2":540.2},{"airline":"Helsinki Jet","x1":1168.5,"y1":540.2,"x2":884.1,"y2":545.3},{"airline":"Helsinki Jet","x1":884.1,"y1":545.3,"x2":1168.5,"y2":540.2},{"airline":"Helsinki Jet","x1":1168.5,"y1":540.2,"x2":916,"y2":722.3},{"airline":"Helsinki Jet","x1":916,"y1":722.3,"x2":1168.5,"y2":540.2},{"airline":"Helsinki Jet","x1":1168.5,"y1":540.2,"x2":1003.3,"y2":602},{"airline":"Helsinki Jet","x1":1003.3,"y1":602,"x2":1168.5,"y2":540.2},{"airline":"Colombier-Saugnieu Express","x1":760.8,"y1":1044,"x2":712.6,"y2":1216.4},{"airline":"Colombier-Saugnieu Express","x1":712.6,"y1":1216.4,"x2":760.8,"y2":1044},{"airline":"Colombier-Saugnieu Express","x1":760.8,"y1":1044,"x2":583.1,"y2":1191.2},{"airline":"Colombier-Saugnieu Express","x1":583.1,"y1":1191.2,"x2":760.8,"y2":1044},{"airline":"Colombier-Saugnieu Express","x1":760.8,"y1":1044,"x2":754.1,"y2":837.7},{"airline":"Colombier-Saugnieu Express","x1":754.1,"y1":837.7,"x2":760.8,"y2":1044},{"airline":"Colombier-Saugnieu Express","x1":760.8,"y1":1044,"x2":641.7,"y2":1070.2},{"airline":"Colombier-Saugnieu Express","x1":641.7,"y1":1070.2,"x2":760.8,"y2":1044},{"airline":"Colombier-Saugnieu Express","x1":760.8,"y1":1044,"x2":832,"y2":912.4},{"airline":"Colombier-Saugnieu Express","x1":832,"y1":912.4,"x2":760.8,"y2":1044},{"airline":"Colombier-Saugnieu Express","x1":760.8,"y1":1044,"x2":708.8,"y2":944.5},{"airline":"Colombier-Saugnieu Express","x1":708.8,"y1":944.5,"x2":760.8,"y2":1044},{"airline":"Colombier-Saugnieu Express","x1":760.8,"y1":1044,"x2":802.9,"y2":885.4},{"airline":"Colombier-Saugnieu Express","x1":802.9,"y1":885.4,"x2":760.8,"y2":1044},{"airline":"Colombier-Saugnieu Express","x1":760.8,"y1":1044,"x2":845.6,"y2":954.5},{"airline":"Colombier-Saugnieu Express","x1":845.6,"y1":954.5,"x2":760.8,"y2":1044},{"airline":"Berlin Airways","x1":933.4,"y1":835.9,"x2":583.1,"y2":1191.2},{"airline":"Berlin Airways","x1":583.1,"y1":1191.2,"x2":933.4,"y2":835.9},{"airline":"Berlin Airways","x1":933.4,"y1":835.9,"x2":763.3,"y2":1109.9},{"airline":"Berlin Airways","x1":763.3,"y1":1109.9,"x2":933.4,"y2":835.9},{"airline":"Berlin Airways","x1":933.4,"y1":835.9,"x2":907.7,"y2":1155.5},{"airline":"Berlin Airways","x1":907.7,"y1":1155.5,"x2":933.4,"y2":835.9},{"airline":"Berlin Airways","x1":933.4,"y1":835.9,"x2":953.7,"y2":1312.5},{"airline":"Berlin Airways","x1":953.7,"y1":1312.5,"x2":933.4,"y2":835.9},{"airline":"Berlin Airways","x1":933.4,"y1":835.9,"x2":712.6,"y2":1216.4},{"airline":"Berlin Airways","x1":712.6,"y1":1216.4,"x2":933.4,"y2":835.9},{"airline":"Berlin Airways","x1":933.4,"y1":835.9,"x2":804.4,"y2":1103.7},{"airline":"Berlin Airways","x1":804.4,"y1":1103.7,"x2":933.4,"y2":835.9},{"airline":"Spata-Artemida Connect","x1":1147.6,"y1":1258.9,"x2":907.3,"y2":867.2},{"airline":"Spata-Artemida Connect","x1":907.3,"y1":867.2,"x2":1147.6,"y2":1258.9},{"airline":"Spata-Artemida Connect","x1":1147.6,"y1":1258.9,"x2":781.7,"y2":1028.9},{"airline":"Spata-Artemida Connect","x1":781.7,"y1":1028.9,"x2":1147.6,"y2":1258.9},{"airline":"Spata-Artemida Connect","x1":1147.6,"y1":1258.9,"x2":763.3,"y2":1109.9},{"airline":"Spata-Artemida Connect","x1":763.3,"y1":1109.9,"x2":1147.6,"y2":1258.9},{"airline":"Spata-Artemida Connect","x1":1147.6,"y1":1258.9,"x2":855.6,"y2":1045.7},{"airline":"Spata-Artemida Connect","x1":855.6,"y1":1045.7,"x2":1147.6,"y2":1258.9},{"airline":"Spata-Artemida Connect","x1":1147.6,"y1":1258.9,"x2":804.4,"y2":1103.7},{"airline":"Spata-Artemida Connect","x1":804.4,"y1":1103.7,"x2":1147.6,"y2":1258.9},{"airline":"Munich Lines","x1":898.2,"y1":964.9,"x2":763.3,"y2":1109.9},{"airline":"Munich Lines","x1":763.3,"y1":1109.9,"x2":898.2,"y2":964.9},{"airline":"Munich Lines","x1":898.2,"y1":964.9,"x2":804.4,"y2":1103.7},{"airline":"Munich Lines","x1":804.4,"y1":1103.7,"x2":898.2,"y2":964.9},{"airline":"Munich Lines","x1":898.2,"y1":964.9,"x2":712.6,"y2":1216.4},{"airline":"Munich Lines","x1":712.6,"y1":1216.4,"x2":898.2,"y2":964.9},{"airline":"Munich Lines","x1":898.2,"y1":964.9,"x2":795.2,"y2":871.5},{"airline":"Munich Lines","x1":795.2,"y1":871.5,"x2":898.2,"y2":964.9},{"airline":"Munich Lines","x1":898.2,"y1":964.9,"x2":953.7,"y2":1312.5},{"airline":"Munich Lines","x1":953.7,"y1":1312.5,"x2":898.2,"y2":964.9},{"airline":"Munich Lines","x1":898.2,"y1":964.9,"x2":704.8,"y2":953.3},{"airline":"Munich Lines","x1":704.8,"y1":953.3,"x2":898.2,"y2":964.9},{"airline":"Munich Lines","x1":898.2,"y1":964.9,"x2":783.8,"y2":925.1},{"airline":"Munich Lines","x1":783.8,"y1":925.1,"x2":898.2,"y2":964.9},{"airline":"Munich Lines","x1":898.2,"y1":964.9,"x2":805.4,"y2":915},{"airline":"Munich Lines","x1":805.4,"y1":915,"x2":898.2,"y2":964.9},{"airline":"Munich Lines","x1":898.2,"y1":964.9,"x2":754.1,"y2":837.7},{"airline":"Munich Lines","x1":754.1,"y1":837.7,"x2":898.2,"y2":964.9},{"airline":"Munich Lines","x1":898.2,"y1":964.9,"x2":1024.6,"y2":1186.8},{"airline":"Munich Lines","x1":1024.6,"y1":1186.8,"x2":898.2,"y2":964.9},{"airline":"Munich Lines","x1":898.2,"y1":964.9,"x2":861.3,"y2":792.7},{"airline":"Munich Lines","x1":861.3,"y1":792.7,"x2":898.2,"y2":964.9},{"airline":"Munich Lines","x1":898.2,"y1":964.9,"x2":760.8,"y2":1044},{"airline":"Munich Lines","x1":760.8,"y1":1044,"x2":898.2,"y2":964.9},{"airline":"Munich Lines","x1":898.2,"y1":964.9,"x2":1108.2,"y2":909.7},{"airline":"Munich Lines","x1":1108.2,"y1":909.7,"x2":898.2,"y2":964.9},{"airline":"Munich Lines","x1":898.2,"y1":964.9,"x2":855.1,"y2":832.6},{"airline":"Munich Lines","x1":855.1,"y1":832.6,"x2":898.2,"y2":964.9},{"airline":"Antalya Air","x1":1288.2,"y1":1285.7,"x2":953.7,"y2":1312.5},{"airline":"Antalya Air","x1":953.7,"y1":1312.5,"x2":1288.2,"y2":1285.7},{"airline":"Antalya Air","x1":1288.2,"y1":1285.7,"x2":1151.8,"y2":1320.5},{"airline":"Antalya Air","x1":1151.8,"y1":1320.5,"x2":1288.2,"y2":1285.7},{"airline":"Antalya Air","x1":1288.2,"y1":1285.7,"x2":924.9,"y2":1252.7},{"airline":"Antalya Air","x1":924.9,"y1":1252.7,"x2":1288.2,"y2":1285.7},{"airline":"Antalya Air","x1":1288.2,"y1":1285.7,"x2":1454.3,"y2":1271.6},{"airline":"Antalya Air","x1":1454.3,"y1":1271.6,"x2":1288.2,"y2":1285.7},{"airline":"Antalya Air","x1":1288.2,"y1":1285.7,"x2":1024.6,"y2":1186.8},{"airline":"Antalya Air","x1":1024.6,"y1":1186.8,"x2":1288.2,"y2":1285.7},{"airline":"Antalya Air","x1":1288.2,"y1":1285.7,"x2":1147.6,"y2":1258.9},{"airline":"Antalya Air","x1":1147.6,"y1":1258.9,"x2":1288.2,"y2":1285.7},{"airline":"Antalya Air","x1":1288.2,"y1":1285.7,"x2":1245.8,"y2":1170},{"airline":"Antalya Air","x1":1245.8,"y1":1170,"x2":1288.2,"y2":1285.7},{"airline":"Ferno Aviation","x1":835.4,"y1":1046.8,"x2":1151.8,"y2":1320.5},{"airline":"Ferno Aviation","x1":1151.8,"y1":1320.5,"x2":835.4,"y2":1046.8},{"airline":"Ferno Aviation","x1":835.4,"y1":1046.8,"x2":1240.8,"y2":1083.6},{"airline":"Ferno Aviation","x1":1240.8,"y1":1083.6,"x2":835.4,"y2":1046.8},{"airline":"Ferno Aviation","x1":835.4,"y1":1046.8,"x2":772.1,"y2":598.6},{"airline":"Ferno Aviation","x1":772.1,"y1":598.6,"x2":835.4,"y2":1046.8},{"airline":"London Jet","x1":647,"y1":865.6,"x2":754.1,"y2":837.7},{"airline":"London Jet","x1":754.1,"y1":837.7,"x2":647,"y2":865.6},{"airline":"London Jet","x1":647,"y1":865.6,"x2":704.8,"y2":953.3},{"airline":"London Jet","x1":704.8,"y1":953.3,"x2":647,"y2":865.6},{"airline":"London Jet","x1":647,"y1":865.6,"x2":748.4,"y2":884.2},{"airline":"London Jet","x1":748.4,"y1":884.2,"x2":647,"y2":865.6},{"airline":"London Jet","x1":647,"y1":865.6,"x2":832,"y2":912.4},{"airline":"London Jet","x1":832,"y1":912.4,"x2":647,"y2":865.6},{"airline":"London Jet","x1":647,"y1":865.6,"x2":708.8,"y2":944.5},{"airline":"London Jet","x1":708.8,"y1":944.5,"x2":647,"y2":865.6},{"airline":"London Jet","x1":647,"y1":865.6,"x2":528,"y2":799.7},{"airline":"London Jet","x1":528,"y1":799.7,"x2":647,"y2":865.6},{"airline":"London Jet","x1":647,"y1":865.6,"x2":802.9,"y2":885.4},{"airline":"London Jet","x1":802.9,"y1":885.4,"x2":647,"y2":865.6},{"airline":"Bâle Express","x1":810.7,"y1":988,"x2":763.3,"y2":1109.9},{"airline":"Bâle Express","x1":763.3,"y1":1109.9,"x2":810.7,"y2":988},{"airline":"Bâle Express","x1":810.7,"y1":988,"x2":804.4,"y2":1103.7},{"airline":"Bâle Express","x1":804.4,"y1":1103.7,"x2":810.7,"y2":988},{"airline":"Bâle Express","x1":810.7,"y1":988,"x2":754.1,"y2":837.7},{"airline":"Bâle Express","x1":754.1,"y1":837.7,"x2":810.7,"y2":988},{"airline":"Bâle Express","x1":810.7,"y1":988,"x2":704.8,"y2":953.3},{"airline":"Bâle Express","x1":704.8,"y1":953.3,"x2":810.7,"y2":988},{"airline":"Bâle Express","x1":810.7,"y1":988,"x2":684.4,"y2":1104.5},{"airline":"Bâle Express","x1":684.4,"y1":1104.5,"x2":810.7,"y2":988},{"airline":"Bâle Express","x1":810.7,"y1":988,"x2":720,"y2":895.1},{"airline":"Bâle Express","x1":720,"y1":895.1,"x2":810.7,"y2":988},{"airline":"Bâle Express","x1":810.7,"y1":988,"x2":855.1,"y2":832.6},{"airline":"Bâle Express","x1":855.1,"y1":832.6,"x2":810.7,"y2":988},{"airline":"Bâle Express","x1":810.7,"y1":988,"x2":583.1,"y2":1191.2},{"airline":"Bâle Express","x1":583.1,"y1":1191.2,"x2":810.7,"y2":988},{"airline":"Barcelona Airways","x1":699,"y1":1169.4,"x2":953.7,"y2":1312.5},{"airline":"Barcelona Airways","x1":953.7,"y1":1312.5,"x2":699,"y2":1169.4},{"airline":"Barcelona Airways","x1":699,"y1":1169.4,"x2":924.9,"y2":1252.7},{"airline":"Barcelona Airways","x1":924.9,"y1":1252.7,"x2":699,"y2":1169.4},{"airline":"Barcelona Airways","x1":699,"y1":1169.4,"x2":754.1,"y2":837.7},{"airline":"Barcelona Airways","x1":754.1,"y1":837.7,"x2":699,"y2":1169.4},{"airline":"Barcelona Airways","x1":699,"y1":1169.4,"x2":535.5,"y2":1272.3},{"airline":"Barcelona Airways","x1":535.5,"y1":1272.3,"x2":699,"y2":1169.4},{"airline":"Barcelona Airways","x1":699,"y1":1169.4,"x2":564.1,"y2":1291.4},{"airline":"Barcelona Airways","x1":564.1,"y1":1291.4,"x2":699,"y2":1169.4},{"airline":"Stuttgart Connect","x1":845.6,"y1":954.5,"x2":478.3,"y2":1170.7},{"airline":"Stuttgart Connect","x1":478.3,"y1":1170.7,"x2":845.6,"y2":954.5},{"airline":"Stuttgart Connect","x1":845.6,"y1":954.5,"x2":1257.6,"y2":1180.2},{"airline":"Stuttgart Connect","x1":1257.6,"y1":1180.2,"x2":845.6,"y2":954.5},{"airline":"Stuttgart Connect","x1":845.6,"y1":954.5,"x2":1165.8,"y2":577.1},{"airline":"Stuttgart Connect","x1":1165.8,"y1":577.1,"x2":845.6,"y2":954.5},{"airline":"Stuttgart Connect","x1":845.6,"y1":954.5,"x2":564.1,"y2":1291.4},{"airline":"Stuttgart Connect","x1":564.1,"y1":1291.4,"x2":845.6,"y2":954.5},{"airline":"Stuttgart Connect","x1":845.6,"y1":954.5,"x2":1240.8,"y2":1083.6},{"airline":"Stuttgart Connect","x1":1240.8,"y1":1083.6,"x2":845.6,"y2":954.5},{"airline":"Stockholm Lines","x1":1024.2,"y1":567.6,"x2":708.8,"y2":944.5},{"airline":"Stockholm Lines","x1":708.8,"y1":944.5,"x2":1024.2,"y2":567.6},{"airline":"Stockholm Lines","x1":1024.2,"y1":567.6,"x2":754.1,"y2":837.7},{"airline":"Stockholm Lines","x1":754.1,"y1":837.7,"x2":1024.2,"y2":567.6},{"airline":"Stockholm Lines","x1":1024.2,"y1":567.6,"x2":908.3,"y2":646},{"airline":"Stockholm Lines","x1":908.3,"y1":646,"x2":1024.2,"y2":567.6},{"airline":"Stockholm Lines","x1":1024.2,"y1":567.6,"x2":884.1,"y2":545.3},{"airline":"Stockholm Lines","x1":884.1,"y1":545.3,"x2":1024.2,"y2":567.6},{"airline":"Stockholm Lines","x1":1024.2,"y1":567.6,"x2":930.8,"y2":725.2},{"airline":"Stockholm Lines","x1":930.8,"y1":725.2,"x2":1024.2,"y2":567.6},{"airline":"Stockholm Lines","x1":1024.2,"y1":567.6,"x2":916,"y2":722.3},{"airline":"Stockholm Lines","x1":916,"y1":722.3,"x2":1024.2,"y2":567.6},{"airline":"Stockholm Lines","x1":1024.2,"y1":567.6,"x2":1110.2,"y2":303.9},{"airline":"Stockholm Lines","x1":1110.2,"y1":303.9,"x2":1024.2,"y2":567.6},{"airline":"Stockholm Lines","x1":1024.2,"y1":567.6,"x2":855.1,"y2":832.6},{"airline":"Stockholm Lines","x1":855.1,"y1":832.6,"x2":1024.2,"y2":567.6},{"airline":"Stockholm Lines","x1":1024.2,"y1":567.6,"x2":933.4,"y2":835.9},{"airline":"Stockholm Lines","x1":933.4,"y1":835.9,"x2":1024.2,"y2":567.6},{"airline":"Stockholm Lines","x1":1024.2,"y1":567.6,"x2":1165.8,"y2":577.1},{"airline":"Stockholm Lines","x1":1165.8,"y1":577.1,"x2":1024.2,"y2":567.6},{"airline":"Stockholm Lines","x1":1024.2,"y1":567.6,"x2":861.3,"y2":792.7},{"airline":"Stockholm Lines","x1":861.3,"y1":792.7,"x2":1024.2,"y2":567.6},{"airline":"Ankara Air","x1":1333.2,"y1":1201,"x2":1223.9,"y2":1276.7},{"airline":"Ankara Air","x1":1223.9,"y1":1276.7,"x2":1333.2,"y2":1201},{"airline":"Ankara Air","x1":1333.2,"y1":1201,"x2":1213.5,"y2":1249.6},{"airline":"Ankara Air","x1":1213.5,"y1":1249.6,"x2":1333.2,"y2":1201},{"airline":"Ankara Air","x1":1333.2,"y1":1201,"x2":1454.3,"y2":1271.6},{"airline":"Ankara Air","x1":1454.3,"y1":1271.6,"x2":1333.2,"y2":1201},{"airline":"Ankara Air","x1":1333.2,"y1":1201,"x2":1232.5,"y2":1298.3},{"airline":"Ankara Air","x1":1232.5,"y1":1298.3,"x2":1333.2,"y2":1201},{"airline":"Zaragoza Aviation","x1":635,"y1":1159.3,"x2":1094.1,"y2":1041.6},{"airline":"Zaragoza Aviation","x1":1094.1,"y1":1041.6,"x2":635,"y2":1159.3},{"airline":"Zaragoza Aviation","x1":635,"y1":1159.3,"x2":372,"y2":1491.9},{"airline":"Zaragoza Aviation","x1":372,"y1":1491.9,"x2":635,"y2":1159.3},{"airline":"Zaragoza Aviation","x1":635,"y1":1159.3,"x2":528.9,"y2":756.7},{"airline":"Zaragoza Aviation","x1":528.9,"y1":756.7,"x2":635,"y2":1159.3},{"airline":"Prague Jet","x1":948.9,"y1":910,"x2":831.8,"y2":992.3},{"airline":"Prague Jet","x1":831.8,"y1":992.3,"x2":948.9,"y2":910},{"airline":"Prague Jet","x1":948.9,"y1":910,"x2":855.1,"y2":832.6},{"airline":"Prague Jet","x1":855.1,"y1":832.6,"x2":948.9,"y2":910},{"airline":"Prague Jet","x1":948.9,"y1":910,"x2":708.8,"y2":944.5},{"airline":"Prague Jet","x1":708.8,"y1":944.5,"x2":948.9,"y2":910},{"airline":"Prague Jet","x1":948.9,"y1":910,"x2":832,"y2":912.4},{"airline":"Prague Jet","x1":832,"y1":912.4,"x2":948.9,"y2":910},{"airline":"Prague Jet","x1":948.9,"y1":910,"x2":754.1,"y2":837.7},{"airline":"Prague Jet","x1":754.1,"y1":837.7,"x2":948.9,"y2":910},{"airline":"Prague Jet","x1":948.9,"y1":910,"x2":845.6,"y2":954.5},{"airline":"Prague Jet","x1":845.6,"y1":954.5,"x2":948.9,"y2":910},{"airline":"Prague Jet","x1":948.9,"y1":910,"x2":916,"y2":722.3},{"airline":"Prague Jet","x1":916,"y1":722.3,"x2":948.9,"y2":910},{"airline":"Prague Jet","x1":948.9,"y1":910,"x2":1108.2,"y2":909.7},{"airline":"Prague Jet","x1":1108.2,"y1":909.7,"x2":948.9,"y2":910},{"airline":"Prague Jet","x1":948.9,"y1":910,"x2":861.3,"y2":792.7},{"airline":"Prague Jet","x1":861.3,"y1":792.7,"x2":948.9,"y2":910},{"airline":"Prague Jet","x1":948.9,"y1":910,"x2":763.3,"y2":1109.9},{"airline":"Prague Jet","x1":763.3,"y1":1109.9,"x2":948.9,"y2":910},{"airline":"Prague Jet","x1":948.9,"y1":910,"x2":1086.5,"y2":842.5},{"airline":"Prague Jet","x1":1086.5,"y1":842.5,"x2":948.9,"y2":910},{"airline":"Prague Jet","x1":948.9,"y1":910,"x2":1051.5,"y2":993.2},{"airline":"Prague Jet","x1":1051.5,"y1":993.2,"x2":948.9,"y2":910},{"airline":"Prague Jet","x1":948.9,"y1":910,"x2":810.7,"y2":988},{"airline":"Prague Jet","x1":810.7,"y1":988,"x2":948.9,"y2":910},{"airline":"Prague Jet","x1":948.9,"y1":910,"x2":748.4,"y2":884.2},{"airline":"Prague Jet","x1":748.4,"y1":884.2,"x2":948.9,"y2":910},{"airline":"Prague Jet","x1":948.9,"y1":910,"x2":805.4,"y2":915},{"airline":"Prague Jet","x1":805.4,"y1":915,"x2":948.9,"y2":910},{"airline":"Prague Jet","x1":948.9,"y1":910,"x2":783.8,"y2":925.1},{"airline":"Prague Jet","x1":783.8,"y1":925.1,"x2":948.9,"y2":910},{"airline":"Prague Jet","x1":948.9,"y1":910,"x2":909.8,"y2":1050.5},{"airline":"Prague Jet","x1":909.8,"y1":1050.5,"x2":948.9,"y2":910},{"airline":"Prague Jet","x1":948.9,"y1":910,"x2":950.5,"y2":1016.9},{"airline":"Prague Jet","x1":950.5,"y1":1016.9,"x2":948.9,"y2":910},{"airline":"Prague Jet","x1":948.9,"y1":910,"x2":835.4,"y2":1046.8},{"airline":"Prague Jet","x1":835.4,"y1":1046.8,"x2":948.9,"y2":910},{"airline":"Prague Jet","x1":948.9,"y1":910,"x2":804.4,"y2":1103.7},{"airline":"Prague Jet","x1":804.4,"y1":1103.7,"x2":948.9,"y2":910},{"airline":"Prague Jet","x1":948.9,"y1":910,"x2":704.8,"y2":953.3},{"airline":"Prague Jet","x1":704.8,"y1":953.3,"x2":948.9,"y2":910},{"airline":"Prague Jet","x1":948.9,"y1":910,"x2":953,"y2":1029.3},{"airline":"Prague Jet","x1":953,"y1":1029.3,"x2":948.9,"y2":910},{"airline":"Budapest Express","x1":1051.5,"y1":993.2,"x2":832,"y2":912.4},{"airline":"Budapest Express","x1":832,"y1":912.4,"x2":1051.5,"y2":993.2},{"airline":"Budapest Express","x1":1051.5,"y1":993.2,"x2":831.8,"y2":992.3},{"airline":"Budapest Express","x1":831.8,"y1":992.3,"x2":1051.5,"y2":993.2},{"airline":"Budapest Express","x1":1051.5,"y1":993.2,"x2":898.2,"y2":964.9},{"airline":"Budapest Express","x1":898.2,"y1":964.9,"x2":1051.5,"y2":993.2},{"airline":"Budapest Express","x1":1051.5,"y1":993.2,"x2":1024.6,"y2":1186.8},{"airline":"Budapest Express","x1":1024.6,"y1":1186.8,"x2":1051.5,"y2":993.2},{"airline":"Budapest Express","x1":1051.5,"y1":993.2,"x2":708.8,"y2":944.5},{"airline":"Budapest Express","x1":708.8,"y1":944.5,"x2":1051.5,"y2":993.2},{"airline":"Budapest Express","x1":1051.5,"y1":993.2,"x2":907.7,"y2":1155.5},{"airline":"Budapest Express","x1":907.7,"y1":1155.5,"x2":1051.5,"y2":993.2},{"airline":"Budapest Express","x1":1051.5,"y1":993.2,"x2":1086.5,"y2":842.5},{"airline":"Budapest Express","x1":1086.5,"y1":842.5,"x2":1051.5,"y2":993.2},{"airline":"Budapest Express","x1":1051.5,"y1":993.2,"x2":933.4,"y2":835.9},{"airline":"Budapest Express","x1":933.4,"y1":835.9,"x2":1051.5,"y2":993.2},{"airline":"Warsaw Connect","x1":1086.5,"y1":842.5,"x2":641.7,"y2":1070.2},{"airline":"Warsaw Connect","x1":641.7,"y1":1070.2,"x2":1086.5,"y2":842.5},{"airline":"Warsaw Connect","x1":1086.5,"y1":842.5,"x2":684.4,"y2":1104.5},{"airline":"Warsaw Connect","x1":684.4,"y1":1104.5,"x2":1086.5,"y2":842.5},{"airline":"Warsaw Connect","x1":1086.5,"y1":842.5,"x2":1223.9,"y2":1276.7},{"airline":"Warsaw Connect","x1":1223.9,"y1":1276.7,"x2":1086.5,"y2":842.5},{"airline":"Warsaw Connect","x1":1086.5,"y1":842.5,"x2":924.9,"y2":1252.7},{"airline":"Warsaw Connect","x1":924.9,"y1":1252.7,"x2":1086.5,"y2":842.5},{"airline":"Warsaw Connect","x1":1086.5,"y1":842.5,"x2":1110.2,"y2":303.9},{"airline":"Warsaw Connect","x1":1110.2,"y1":303.9,"x2":1086.5,"y2":842.5},{"airline":"Hamburg Lines","x1":861.3,"y1":792.7,"x2":805.4,"y2":915},{"airline":"Hamburg Lines","x1":805.4,"y1":915,"x2":861.3,"y2":792.7},{"airline":"Hamburg Lines","x1":861.3,"y1":792.7,"x2":708.8,"y2":944.5},{"airline":"Hamburg Lines","x1":708.8,"y1":944.5,"x2":861.3,"y2":792.7},{"airline":"Hamburg Lines","x1":861.3,"y1":792.7,"x2":831.8,"y2":992.3},{"airline":"Hamburg Lines","x1":831.8,"y1":992.3,"x2":861.3,"y2":792.7},{"airline":"Hamburg Lines","x1":861.3,"y1":792.7,"x2":763.3,"y2":1109.9},{"airline":"Hamburg Lines","x1":763.3,"y1":1109.9,"x2":861.3,"y2":792.7},{"airline":"Hamburg Lines","x1":861.3,"y1":792.7,"x2":845.6,"y2":954.5},{"airline":"Hamburg Lines","x1":845.6,"y1":954.5,"x2":861.3,"y2":792.7},{"airline":"Hamburg Lines","x1":861.3,"y1":792.7,"x2":748.4,"y2":884.2},{"airline":"Hamburg Lines","x1":748.4,"y1":884.2,"x2":861.3,"y2":792.7},{"airline":"Hamburg Lines","x1":861.3,"y1":792.7,"x2":704.8,"y2":953.3},{"airline":"Hamburg Lines","x1":704.8,"y1":953.3,"x2":861.3,"y2":792.7},{"airline":"Hamburg Lines","x1":861.3,"y1":792.7,"x2":754.1,"y2":837.7},{"airline":"Hamburg Lines","x1":754.1,"y1":837.7,"x2":861.3,"y2":792.7},{"airline":"Hamburg Lines","x1":861.3,"y1":792.7,"x2":783.8,"y2":925.1},{"airline":"Hamburg Lines","x1":783.8,"y1":925.1,"x2":861.3,"y2":792.7},{"airline":"Hamburg Lines","x1":861.3,"y1":792.7,"x2":884.1,"y2":545.3},{"airline":"Hamburg Lines","x1":884.1,"y1":545.3,"x2":861.3,"y2":792.7},{"airline":"Hamburg Lines","x1":861.3,"y1":792.7,"x2":996.3,"y2":972.4},{"airline":"Hamburg Lines","x1":996.3,"y1":972.4,"x2":861.3,"y2":792.7},{"airline":"Hamburg Lines","x1":861.3,"y1":792.7,"x2":810.7,"y2":988},{"airline":"Hamburg Lines","x1":810.7,"y1":988,"x2":861.3,"y2":792.7},{"airline":"Hamburg Lines","x1":861.3,"y1":792.7,"x2":1108.2,"y2":909.7},{"airline":"Hamburg Lines","x1":1108.2,"y1":909.7,"x2":861.3,"y2":792.7},{"airline":"Hamburg Lines","x1":861.3,"y1":792.7,"x2":804.4,"y2":1103.7},{"airline":"Hamburg Lines","x1":804.4,"y1":1103.7,"x2":861.3,"y2":792.7},{"airline":"Vienna Air","x1":996.3,"y1":972.4,"x2":763.3,"y2":1109.9},{"airline":"Vienna Air","x1":763.3,"y1":1109.9,"x2":996.3,"y2":972.4},{"airline":"Vienna Air","x1":996.3,"y1":972.4,"x2":708.8,"y2":944.5},{"airline":"Vienna Air","x1":708.8,"y1":944.5,"x2":996.3,"y2":972.4},{"airline":"Vienna Air","x1":996.3,"y1":972.4,"x2":832,"y2":912.4},{"airline":"Vienna Air","x1":832,"y1":912.4,"x2":996.3,"y2":972.4},{"airline":"Vienna Air","x1":996.3,"y1":972.4,"x2":831.8,"y2":992.3},{"airline":"Vienna Air","x1":831.8,"y1":992.3,"x2":996.3,"y2":972.4},{"airline":"Vienna Air","x1":996.3,"y1":972.4,"x2":933.4,"y2":835.9},{"airline":"Vienna Air","x1":933.4,"y1":835.9,"x2":996.3,"y2":972.4},{"airline":"Vienna Air","x1":996.3,"y1":972.4,"x2":855.1,"y2":832.6},{"airline":"Vienna Air","x1":855.1,"y1":832.6,"x2":996.3,"y2":972.4},{"airline":"Vienna Air","x1":996.3,"y1":972.4,"x2":924.9,"y2":1252.7},{"airline":"Vienna Air","x1":924.9,"y1":1252.7,"x2":996.3,"y2":972.4},{"airline":"Schkeuditz Aviation","x1":907.3,"y1":867.2,"x2":1110.2,"y2":303.9},{"airline":"Schkeuditz Aviation","x1":1110.2,"y1":303.9,"x2":907.3,"y2":867.2},{"airline":"Schkeuditz Aviation","x1":907.3,"y1":867.2,"x2":1240.8,"y2":1083.6},{"airline":"Schkeuditz Aviation","x1":1240.8,"y1":1083.6,"x2":907.3,"y2":867.2},{"airline":"Oslo Jet","x1":884.1,"y1":545.3,"x2":1003.3,"y2":602},{"airline":"Oslo Jet","x1":1003.3,"y1":602,"x2":884.1,"y2":545.3},{"airline":"Oslo Jet","x1":884.1,"y1":545.3,"x2":874.2,"y2":697.1},{"airline":"Oslo Jet","x1":874.2,"y1":697.1,"x2":884.1,"y2":545.3},{"airline":"Oslo Jet","x1":884.1,"y1":545.3,"x2":855.1,"y2":832.6},{"airline":"Oslo Jet","x1":855.1,"y1":832.6,"x2":884.1,"y2":545.3},{"airline":"Dublin Express","x1":528,"y1":799.7,"x2":708.8,"y2":944.5},{"airline":"Dublin Express","x1":708.8,"y1":944.5,"x2":528,"y2":799.7},{"airline":"Dublin Express","x1":528,"y1":799.7,"x2":754.1,"y2":837.7},{"airline":"Dublin Express","x1":754.1,"y1":837.7,"x2":528,"y2":799.7},{"airline":"Chişinău Airways","x1":1249.9,"y1":1008.3,"x2":1245.8,"y2":1170},{"airline":"Chişinău Airways","x1":1245.8,"y1":1170,"x2":1249.9,"y2":1008.3},{"airline":"Chişinău Airways","x1":1249.9,"y1":1008.3,"x2":1288.2,"y2":1285.7},{"airline":"Chişinău Airways","x1":1288.2,"y1":1285.7,"x2":1249.9,"y2":1008.3},{"airline":"Chişinău Airways","x1":1249.9,"y1":1008.3,"x2":1108.2,"y2":909.7},{"airline":"Chişinău Airways","x1":1108.2,"y1":909.7,"x2":1249.9,"y2":1008.3},{"airline":"Pendik Connect","x1":1257.6,"y1":1180.2,"x2":907.3,"y2":867.2},{"airline":"Pendik Connect","x1":907.3,"y1":867.2,"x2":1257.6,"y2":1180.2},{"airline":"Pendik Connect","x1":1257.6,"y1":1180.2,"x2":909.8,"y2":1050.5},{"airline":"Pendik Connect","x1":909.8,"y1":1050.5,"x2":1257.6,"y2":1180.2},{"airline":"Pendik Connect","x1":1257.6,"y1":1180.2,"x2":953.7,"y2":1312.5},{"airline":"Pendik Connect","x1":953.7,"y1":1312.5,"x2":1257.6,"y2":1180.2},{"airline":"Pendik Connect","x1":1257.6,"y1":1180.2,"x2":924.9,"y2":1252.7},{"airline":"Pendik Connect","x1":924.9,"y1":1252.7,"x2":1257.6,"y2":1180.2},{"airline":"Pendik Connect","x1":1257.6,"y1":1180.2,"x2":835.4,"y2":1046.8},{"airline":"Pendik Connect","x1":835.4,"y1":1046.8,"x2":1257.6,"y2":1180.2},{"airline":"Otopeni Lines","x1":1191.9,"y1":1077.6,"x2":1094.1,"y2":1041.6},{"airline":"Otopeni Lines","x1":1094.1,"y1":1041.6,"x2":1191.9,"y2":1077.6},{"airline":"Otopeni Lines","x1":1191.9,"y1":1077.6,"x2":1245.8,"y2":1170},{"airline":"Otopeni Lines","x1":1245.8,"y1":1170,"x2":1191.9,"y2":1077.6},{"airline":"Otopeni Lines","x1":1191.9,"y1":1077.6,"x2":1024.6,"y2":1186.8},{"airline":"Otopeni Lines","x1":1024.6,"y1":1186.8,"x2":1191.9,"y2":1077.6},{"airline":"Otopeni Lines","x1":1191.9,"y1":1077.6,"x2":1108.2,"y2":909.7},{"airline":"Otopeni Lines","x1":1108.2,"y1":909.7,"x2":1191.9,"y2":1077.6},{"airline":"Otopeni Lines","x1":1191.9,"y1":1077.6,"x2":1127.6,"y2":1190.5},{"airline":"Otopeni Lines","x1":1127.6,"y1":1190.5,"x2":1191.9,"y2":1077.6},{"airline":"Otopeni Lines","x1":1191.9,"y1":1077.6,"x2":1232.5,"y2":1298.3},{"airline":"Otopeni Lines","x1":1232.5,"y1":1298.3,"x2":1191.9,"y2":1077.6},{"airline":"Otopeni Lines","x1":1191.9,"y1":1077.6,"x2":1147.6,"y2":1258.9},{"airline":"Otopeni Lines","x1":1147.6,"y1":1258.9,"x2":1191.9,"y2":1077.6},{"airline":"Otopeni Lines","x1":1191.9,"y1":1077.6,"x2":1151.8,"y2":1320.5},{"airline":"Otopeni Lines","x1":1151.8,"y1":1320.5,"x2":1191.9,"y2":1077.6},{"airline":"Otopeni Lines","x1":1191.9,"y1":1077.6,"x2":1288.2,"y2":1285.7},{"airline":"Otopeni Lines","x1":1288.2,"y1":1285.7,"x2":1191.9,"y2":1077.6},{"airline":"Belgrade Air","x1":1073,"y1":1070.5,"x2":1024.6,"y2":1186.8},{"airline":"Belgrade Air","x1":1024.6,"y1":1186.8,"x2":1073,"y2":1070.5},{"airline":"Belgrade Air","x1":1073,"y1":1070.5,"x2":1245.8,"y2":1170},{"airline":"Belgrade Air","x1":1245.8,"y1":1170,"x2":1073,"y2":1070.5},{"airline":"Toulouse Aviation","x1":684.4,"y1":1104.5,"x2":874.2,"y2":697.1},{"airline":"Toulouse Aviation","x1":874.2,"y1":697.1,"x2":684.4,"y2":1104.5},{"airline":"Toulouse Aviation","x1":684.4,"y1":1104.5,"x2":1027.9,"y2":922.9},{"airline":"Toulouse Aviation","x1":1027.9,"y1":922.9,"x2":684.4,"y2":1104.5},{"airline":"Marignane Jet","x1":763.3,"y1":1109.9,"x2":712.6,"y2":1216.4},{"airline":"Marignane Jet","x1":712.6,"y1":1216.4,"x2":763.3,"y2":1109.9},{"airline":"Marignane Jet","x1":763.3,"y1":1109.9,"x2":641.7,"y2":1070.2},{"airline":"Marignane Jet","x1":641.7,"y1":1070.2,"x2":763.3,"y2":1109.9},{"airline":"Marignane Jet","x1":763.3,"y1":1109.9,"x2":564.1,"y2":1291.4},{"airline":"Marignane Jet","x1":564.1,"y1":1291.4,"x2":763.3,"y2":1109.9},{"airline":"Marignane Jet","x1":763.3,"y1":1109.9,"x2":953.7,"y2":1312.5},{"airline":"Marignane Jet","x1":953.7,"y1":1312.5,"x2":763.3,"y2":1109.9},{"airline":"Marignane Jet","x1":763.3,"y1":1109.9,"x2":1024.6,"y2":1186.8},{"airline":"Marignane Jet","x1":1024.6,"y1":1186.8,"x2":763.3,"y2":1109.9},{"airline":"Marignane Jet","x1":763.3,"y1":1109.9,"x2":708.8,"y2":944.5},{"airline":"Marignane Jet","x1":708.8,"y1":944.5,"x2":763.3,"y2":1109.9},{"airline":"Marignane Jet","x1":763.3,"y1":1109.9,"x2":831.8,"y2":992.3},{"airline":"Marignane Jet","x1":831.8,"y1":992.3,"x2":763.3,"y2":1109.9},{"airline":"Marignane Jet","x1":763.3,"y1":1109.9,"x2":704.8,"y2":953.3},{"airline":"Marignane Jet","x1":704.8,"y1":953.3,"x2":763.3,"y2":1109.9},{"airline":"Marignane Jet","x1":763.3,"y1":1109.9,"x2":635,"y2":1159.3},{"airline":"Marignane Jet","x1":635,"y1":1159.3,"x2":763.3,"y2":1109.9},{"airline":"Marignane Jet","x1":763.3,"y1":1109.9,"x2":835.4,"y2":1046.8},{"airline":"Marignane Jet","x1":835.4,"y1":1046.8,"x2":763.3,"y2":1109.9},{"airline":"Marignane Jet","x1":763.3,"y1":1109.9,"x2":699,"y2":1169.4},{"airline":"Marignane Jet","x1":699,"y1":1169.4,"x2":763.3,"y2":1109.9},{"airline":"Marignane Jet","x1":763.3,"y1":1109.9,"x2":684.4,"y2":1104.5},{"airline":"Marignane Jet","x1":684.4,"y1":1104.5,"x2":763.3,"y2":1109.9},{"airline":"Marignane Jet","x1":763.3,"y1":1109.9,"x2":748.4,"y2":884.2},{"airline":"Marignane Jet","x1":748.4,"y1":884.2,"x2":763.3,"y2":1109.9},{"airline":"Marignane Jet","x1":763.3,"y1":1109.9,"x2":721.4,"y2":1042.2},{"airline":"Marignane Jet","x1":721.4,"y1":1042.2,"x2":763.3,"y2":1109.9},{"airline":"Marignane Jet","x1":763.3,"y1":1109.9,"x2":869.6,"y2":1103},{"airline":"Marignane Jet","x1":869.6,"y1":1103,"x2":763.3,"y2":1109.9},{"airline":"Marignane Jet","x1":763.3,"y1":1109.9,"x2":565.8,"y2":962},{"airline":"Marignane Jet","x1":565.8,"y1":962,"x2":763.3,"y2":1109.9},{"airline":"Marignane Jet","x1":763.3,"y1":1109.9,"x2":855.6,"y2":1045.7},{"airline":"Marignane Jet","x1":855.6,"y1":1045.7,"x2":763.3,"y2":1109.9},{"airline":"Marignane Jet","x1":763.3,"y1":1109.9,"x2":720,"y2":895.1},{"airline":"Marignane Jet","x1":720,"y1":895.1,"x2":763.3,"y2":1109.9},{"airline":"Marignane Jet","x1":763.3,"y1":1109.9,"x2":909.8,"y2":1050.5},{"airline":"Marignane Jet","x1":909.8,"y1":1050.5,"x2":763.3,"y2":1109.9},{"airline":"Marignane Jet","x1":763.3,"y1":1109.9,"x2":783.8,"y2":925.1},{"airline":"Marignane Jet","x1":783.8,"y1":925.1,"x2":763.3,"y2":1109.9},{"airline":"Marignane Jet","x1":763.3,"y1":1109.9,"x2":535.5,"y2":1272.3},{"airline":"Marignane Jet","x1":535.5,"y1":1272.3,"x2":763.3,"y2":1109.9},{"airline":"Tarsus Express","x1":1375.8,"y1":1285.9,"x2":1245.8,"y2":1170},{"airline":"Tarsus Express","x1":1245.8,"y1":1170,"x2":1375.8,"y2":1285.9},{"airline":"Tarsus Express","x1":1375.8,"y1":1285.9,"x2":1223.9,"y2":1276.7},{"airline":"Tarsus Express","x1":1223.9,"y1":1276.7,"x2":1375.8,"y2":1285.9},{"airline":"Tarsus Express","x1":1375.8,"y1":1285.9,"x2":1333.2,"y2":1201},{"airline":"Tarsus Express","x1":1333.2,"y1":1201,"x2":1375.8,"y2":1285.9},{"airline":"Tarsus Express","x1":1375.8,"y1":1285.9,"x2":1257.6,"y2":1180.2},{"airline":"Tarsus Express","x1":1257.6,"y1":1180.2,"x2":1375.8,"y2":1285.9},{"airline":"Clermont-Ferrand Airways","x1":721.4,"y1":1042.2,"x2":712.6,"y2":1216.4},{"airline":"Clermont-Ferrand Airways","x1":712.6,"y1":1216.4,"x2":721.4,"y2":1042.2},{"airline":"Clermont-Ferrand Airways","x1":721.4,"y1":1042.2,"x2":583.1,"y2":1191.2},{"airline":"Clermont-Ferrand Airways","x1":583.1,"y1":1191.2,"x2":721.4,"y2":1042.2},{"airline":"Clermont-Ferrand Airways","x1":721.4,"y1":1042.2,"x2":924.9,"y2":1252.7},{"airline":"Clermont-Ferrand Airways","x1":924.9,"y1":1252.7,"x2":721.4,"y2":1042.2},{"airline":"Clermont-Ferrand Airways","x1":721.4,"y1":1042.2,"x2":754.1,"y2":837.7},{"airline":"Clermont-Ferrand Airways","x1":754.1,"y1":837.7,"x2":721.4,"y2":1042.2},{"airline":"Clermont-Ferrand Airways","x1":721.4,"y1":1042.2,"x2":907.7,"y2":1155.5},{"airline":"Clermont-Ferrand Airways","x1":907.7,"y1":1155.5,"x2":721.4,"y2":1042.2},{"airline":"Clermont-Ferrand Airways","x1":721.4,"y1":1042.2,"x2":802.9,"y2":885.4},{"airline":"Clermont-Ferrand Airways","x1":802.9,"y1":885.4,"x2":721.4,"y2":1042.2},{"airline":"Clermont-Ferrand Airways","x1":721.4,"y1":1042.2,"x2":565.8,"y2":962},{"airline":"Clermont-Ferrand Airways","x1":565.8,"y1":962,"x2":721.4,"y2":1042.2},{"airline":"Feldkirchen bei Graz Connect","x1":973.1,"y1":1006.4,"x2":1232.5,"y2":1298.3},{"airline":"Feldkirchen bei Graz Connect","x1":1232.5,"y1":1298.3,"x2":973.1,"y2":1006.4},{"airline":"Feldkirchen bei Graz Connect","x1":973.1,"y1":1006.4,"x2":528,"y2":799.7},{"airline":"Feldkirchen bei Graz Connect","x1":528,"y1":799.7,"x2":973.1,"y2":1006.4},{"airline":"Feldkirchen bei Graz Connect","x1":973.1,"y1":1006.4,"x2":1165.8,"y2":577.1},{"airline":"Feldkirchen bei Graz Connect","x1":1165.8,"y1":577.1,"x2":973.1,"y2":1006.4},{"airline":"Feldkirchen bei Graz Connect","x1":973.1,"y1":1006.4,"x2":772.1,"y2":598.6},{"airline":"Feldkirchen bei Graz Connect","x1":772.1,"y1":598.6,"x2":973.1,"y2":1006.4},{"airline":"Feldkirchen bei Graz Connect","x1":973.1,"y1":1006.4,"x2":884.1,"y2":545.3},{"airline":"Feldkirchen bei Graz Connect","x1":884.1,"y1":545.3,"x2":973.1,"y2":1006.4},{"airline":"Thessaloniki Lines","x1":1127.6,"y1":1190.5,"x2":1232.5,"y2":1298.3},{"airline":"Thessaloniki Lines","x1":1232.5,"y1":1298.3,"x2":1127.6,"y2":1190.5},{"airline":"Thessaloniki Lines","x1":1127.6,"y1":1190.5,"x2":1151.8,"y2":1320.5},{"airline":"Thessaloniki Lines","x1":1151.8,"y1":1320.5,"x2":1127.6,"y2":1190.5},{"airline":"Thessaloniki Lines","x1":1127.6,"y1":1190.5,"x2":1024.6,"y2":1186.8},{"airline":"Thessaloniki Lines","x1":1024.6,"y1":1186.8,"x2":1127.6,"y2":1190.5},{"airline":"Thessaloniki Lines","x1":1127.6,"y1":1190.5,"x2":924.9,"y2":1252.7},{"airline":"Thessaloniki Lines","x1":924.9,"y1":1252.7,"x2":1127.6,"y2":1190.5},{"airline":"Thessaloniki Lines","x1":1127.6,"y1":1190.5,"x2":907.7,"y2":1155.5},{"airline":"Thessaloniki Lines","x1":907.7,"y1":1155.5,"x2":1127.6,"y2":1190.5},{"airline":"Thessaloniki Lines","x1":1127.6,"y1":1190.5,"x2":1288.2,"y2":1285.7},{"airline":"Thessaloniki Lines","x1":1288.2,"y1":1285.7,"x2":1127.6,"y2":1190.5},{"airline":"Thessaloniki Lines","x1":1127.6,"y1":1190.5,"x2":1223.9,"y2":1276.7},{"airline":"Thessaloniki Lines","x1":1223.9,"y1":1276.7,"x2":1127.6,"y2":1190.5},{"airline":"Thessaloniki Lines","x1":1127.6,"y1":1190.5,"x2":832,"y2":912.4},{"airline":"Thessaloniki Lines","x1":832,"y1":912.4,"x2":1127.6,"y2":1190.5},{"airline":"Valletta Air","x1":953.7,"y1":1312.5,"x2":1232.5,"y2":1298.3},{"airline":"Valletta Air","x1":1232.5,"y1":1298.3,"x2":953.7,"y2":1312.5},{"airline":"Valletta Air","x1":953.7,"y1":1312.5,"x2":1151.8,"y2":1320.5},{"airline":"Valletta Air","x1":1151.8,"y1":1320.5,"x2":953.7,"y2":1312.5},{"airline":"Valletta Air","x1":953.7,"y1":1312.5,"x2":712.6,"y2":1216.4},{"airline":"Valletta Air","x1":712.6,"y1":1216.4,"x2":953.7,"y2":1312.5},{"airline":"Valletta Air","x1":953.7,"y1":1312.5,"x2":804.4,"y2":1103.7},{"airline":"Valletta Air","x1":804.4,"y1":1103.7,"x2":953.7,"y2":1312.5},{"airline":"Valletta Air","x1":953.7,"y1":1312.5,"x2":1024.6,"y2":1186.8},{"airline":"Valletta Air","x1":1024.6,"y1":1186.8,"x2":953.7,"y2":1312.5},{"airline":"Valletta Air","x1":953.7,"y1":1312.5,"x2":831.8,"y2":992.3},{"airline":"Valletta Air","x1":831.8,"y1":992.3,"x2":953.7,"y2":1312.5},{"airline":"Konya Aviation","x1":1324.3,"y1":1257.8,"x2":950.5,"y2":1016.9},{"airline":"Konya Aviation","x1":950.5,"y1":1016.9,"x2":1324.3,"y2":1257.8},{"airline":"Konya Aviation","x1":1324.3,"y1":1257.8,"x2":1027.9,"y2":922.9},{"airline":"Konya Aviation","x1":1027.9,"y1":922.9,"x2":1324.3,"y2":1257.8},{"airline":"Konya Aviation","x1":1324.3,"y1":1257.8,"x2":1094.1,"y2":1041.6},{"airline":"Konya Aviation","x1":1094.1,"y1":1041.6,"x2":1324.3,"y2":1257.8},{"airline":"Palermo Jet","x1":924.9,"y1":1252.7,"x2":804.4,"y2":1103.7},{"airline":"Palermo Jet","x1":804.4,"y1":1103.7,"x2":924.9,"y2":1252.7},{"airline":"Palermo Jet","x1":924.9,"y1":1252.7,"x2":909.8,"y2":1050.5},{"airline":"Palermo Jet","x1":909.8,"y1":1050.5,"x2":924.9,"y2":1252.7},{"airline":"Palermo Jet","x1":924.9,"y1":1252.7,"x2":763.3,"y2":1109.9},{"airline":"Palermo Jet","x1":763.3,"y1":1109.9,"x2":924.9,"y2":1252.7},{"airline":"Palermo Jet","x1":924.9,"y1":1252.7,"x2":712.6,"y2":1216.4},{"airline":"Palermo Jet","x1":712.6,"y1":1216.4,"x2":924.9,"y2":1252.7},{"airline":"Palermo Jet","x1":924.9,"y1":1252.7,"x2":1024.6,"y2":1186.8},{"airline":"Palermo Jet","x1":1024.6,"y1":1186.8,"x2":924.9,"y2":1252.7},{"airline":"Palermo Jet","x1":924.9,"y1":1252.7,"x2":869.6,"y2":1103},{"airline":"Palermo Jet","x1":869.6,"y1":1103,"x2":924.9,"y2":1252.7},{"airline":"Palermo Jet","x1":924.9,"y1":1252.7,"x2":835.4,"y2":1046.8},{"airline":"Palermo Jet","x1":835.4,"y1":1046.8,"x2":924.9,"y2":1252.7},{"airline":"Palermo Jet","x1":924.9,"y1":1252.7,"x2":831.8,"y2":992.3},{"airline":"Palermo Jet","x1":831.8,"y1":992.3,"x2":924.9,"y2":1252.7},{"airline":"Palermo Jet","x1":924.9,"y1":1252.7,"x2":832,"y2":912.4},{"airline":"Palermo Jet","x1":832,"y1":912.4,"x2":924.9,"y2":1252.7},{"airline":"Palermo Jet","x1":924.9,"y1":1252.7,"x2":907.7,"y2":1155.5},{"airline":"Palermo Jet","x1":907.7,"y1":1155.5,"x2":924.9,"y2":1252.7},{"airline":"Palermo Jet","x1":924.9,"y1":1252.7,"x2":1147.6,"y2":1258.9},{"airline":"Palermo Jet","x1":1147.6,"y1":1258.9,"x2":924.9,"y2":1252.7},{"airline":"Palermo Jet","x1":924.9,"y1":1252.7,"x2":813.3,"y2":1059.4},{"airline":"Palermo Jet","x1":813.3,"y1":1059.4,"x2":924.9,"y2":1252.7},{"airline":"Palermo Jet","x1":924.9,"y1":1252.7,"x2":564.1,"y2":1291.4},{"airline":"Palermo Jet","x1":564.1,"y1":1291.4,"x2":924.9,"y2":1252.7},{"airline":"Palermo Jet","x1":924.9,"y1":1252.7,"x2":1232.5,"y2":1298.3},{"airline":"Palermo Jet","x1":1232.5,"y1":1298.3,"x2":924.9,"y2":1252.7},{"airline":"Palermo Jet","x1":924.9,"y1":1252.7,"x2":760.8,"y2":1044},{"airline":"Palermo Jet","x1":760.8,"y1":1044,"x2":924.9,"y2":1252.7},{"airline":"Palermo Jet","x1":924.9,"y1":1252.7,"x2":898.2,"y2":964.9},{"airline":"Palermo Jet","x1":898.2,"y1":964.9,"x2":924.9,"y2":1252.7},{"airline":"Palermo Jet","x1":924.9,"y1":1252.7,"x2":754.1,"y2":837.7},{"airline":"Palermo Jet","x1":754.1,"y1":837.7,"x2":924.9,"y2":1252.7},{"airline":"Palermo Jet","x1":924.9,"y1":1252.7,"x2":810.7,"y2":988},{"airline":"Palermo Jet","x1":810.7,"y1":988,"x2":924.9,"y2":1252.7},{"airline":"London Express","x1":652.6,"y1":876.1,"x2":832,"y2":912.4},{"airline":"London Express","x1":832,"y1":912.4,"x2":652.6,"y2":876.1},{"airline":"London Express","x1":652.6,"y1":876.1,"x2":802.9,"y2":885.4},{"airline":"London Express","x1":802.9,"y1":885.4,"x2":652.6,"y2":876.1},{"airline":"Luxembourg Airways","x1":783.8,"y1":925.1,"x2":583.1,"y2":1191.2},{"airline":"Luxembourg Airways","x1":583.1,"y1":1191.2,"x2":783.8,"y2":925.1},{"airline":"Luxembourg Airways","x1":783.8,"y1":925.1,"x2":712.6,"y2":1216.4},{"airline":"Luxembourg Airways","x1":712.6,"y1":1216.4,"x2":783.8,"y2":925.1},{"airline":"Luxembourg Airways","x1":783.8,"y1":925.1,"x2":804.4,"y2":1103.7},{"airline":"Luxembourg Airways","x1":804.4,"y1":1103.7,"x2":783.8,"y2":925.1},{"airline":"Luxembourg Airways","x1":783.8,"y1":925.1,"x2":907.7,"y2":1155.5},{"airline":"Luxembourg Airways","x1":907.7,"y1":1155.5,"x2":783.8,"y2":925.1},{"airline":"Luxembourg Airways","x1":783.8,"y1":925.1,"x2":924.9,"y2":1252.7},{"airline":"Luxembourg Airways","x1":924.9,"y1":1252.7,"x2":783.8,"y2":925.1},{"airline":"Luxembourg Airways","x1":783.8,"y1":925.1,"x2":916,"y2":722.3},{"airline":"Luxembourg Airways","x1":916,"y1":722.3,"x2":783.8,"y2":925.1},{"airline":"Luxembourg Airways","x1":783.8,"y1":925.1,"x2":953.7,"y2":1312.5},{"airline":"Luxembourg Airways","x1":953.7,"y1":1312.5,"x2":783.8,"y2":925.1},{"airline":"Şanlıurfa Connect","x1":1454.3,"y1":1271.6,"x2":1151.8,"y2":1320.5},{"airline":"Şanlıurfa Connect","x1":1151.8,"y1":1320.5,"x2":1454.3,"y2":1271.6},{"airline":"Şanlıurfa Connect","x1":1454.3,"y1":1271.6,"x2":1127.6,"y2":1190.5},{"airline":"Şanlıurfa Connect","x1":1127.6,"y1":1190.5,"x2":1454.3,"y2":1271.6},{"airline":"Şanlıurfa Connect","x1":1454.3,"y1":1271.6,"x2":1249.9,"y2":1008.3},{"airline":"Şanlıurfa Connect","x1":1249.9,"y1":1008.3,"x2":1454.3,"y2":1271.6},{"airline":"Şanlıurfa Connect","x1":1454.3,"y1":1271.6,"x2":1191.9,"y2":1077.6},{"airline":"Şanlıurfa Connect","x1":1191.9,"y1":1077.6,"x2":1454.3,"y2":1271.6},{"airline":"Şanlıurfa Connect","x1":1454.3,"y1":1271.6,"x2":1232.5,"y2":1298.3},{"airline":"Şanlıurfa Connect","x1":1232.5,"y1":1298.3,"x2":1454.3,"y2":1271.6},{"airline":"Venezia Lines","x1":909.8,"y1":1050.5,"x2":1024.6,"y2":1186.8},{"airline":"Venezia Lines","x1":1024.6,"y1":1186.8,"x2":909.8,"y2":1050.5},{"airline":"Venezia Lines","x1":909.8,"y1":1050.5,"x2":832,"y2":912.4},{"airline":"Venezia Lines","x1":832,"y1":912.4,"x2":909.8,"y2":1050.5},{"airline":"Venezia Lines","x1":909.8,"y1":1050.5,"x2":831.8,"y2":992.3},{"airline":"Venezia Lines","x1":831.8,"y1":992.3,"x2":909.8,"y2":1050.5},{"airline":"Venezia Lines","x1":909.8,"y1":1050.5,"x2":813.3,"y2":1059.4},{"airline":"Venezia Lines","x1":813.3,"y1":1059.4,"x2":909.8,"y2":1050.5},{"airline":"Venezia Lines","x1":909.8,"y1":1050.5,"x2":754.1,"y2":837.7},{"airline":"Venezia Lines","x1":754.1,"y1":837.7,"x2":909.8,"y2":1050.5},{"airline":"Venezia Lines","x1":909.8,"y1":1050.5,"x2":996.3,"y2":972.4},{"airline":"Venezia Lines","x1":996.3,"y1":972.4,"x2":909.8,"y2":1050.5},{"airline":"Venezia Lines","x1":909.8,"y1":1050.5,"x2":953.7,"y2":1312.5},{"airline":"Venezia Lines","x1":953.7,"y1":1312.5,"x2":909.8,"y2":1050.5},{"airline":"Venezia Lines","x1":909.8,"y1":1050.5,"x2":712.6,"y2":1216.4},{"airline":"Venezia Lines","x1":712.6,"y1":1216.4,"x2":909.8,"y2":1050.5},{"airline":"Venezia Lines","x1":909.8,"y1":1050.5,"x2":810.7,"y2":988},{"airline":"Venezia Lines","x1":810.7,"y1":988,"x2":909.8,"y2":1050.5},{"airline":"Venezia Lines","x1":909.8,"y1":1050.5,"x2":845.6,"y2":954.5},{"airline":"Venezia Lines","x1":845.6,"y1":954.5,"x2":909.8,"y2":1050.5},{"airline":"Venezia Lines","x1":909.8,"y1":1050.5,"x2":760.8,"y2":1044},{"airline":"Venezia Lines","x1":760.8,"y1":1044,"x2":909.8,"y2":1050.5},{"airline":"Venezia Lines","x1":909.8,"y1":1050.5,"x2":781.7,"y2":1028.9},{"airline":"Venezia Lines","x1":781.7,"y1":1028.9,"x2":909.8,"y2":1050.5},{"airline":"Palma Air","x1":712.6,"y1":1216.4,"x2":340.8,"y2":1504},{"airline":"Palma Air","x1":340.8,"y1":1504,"x2":712.6,"y2":1216.4},{"airline":"Palma Air","x1":712.6,"y1":1216.4,"x2":1024.6,"y2":1186.8},{"airline":"Palma Air","x1":1024.6,"y1":1186.8,"x2":712.6,"y2":1216.4},{"airline":"Palma Air","x1":712.6,"y1":1216.4,"x2":535.5,"y2":1272.3},{"airline":"Palma Air","x1":535.5,"y1":1272.3,"x2":712.6,"y2":1216.4},{"airline":"Palma Air","x1":712.6,"y1":1216.4,"x2":564.1,"y2":1291.4},{"airline":"Palma Air","x1":564.1,"y1":1291.4,"x2":712.6,"y2":1216.4},{"airline":"Palma Air","x1":712.6,"y1":1216.4,"x2":804.4,"y2":1103.7},{"airline":"Palma Air","x1":804.4,"y1":1103.7,"x2":712.6,"y2":1216.4},{"airline":"Gaziemir Aviation","x1":1213.5,"y1":1249.6,"x2":855.6,"y2":1045.7},{"airline":"Gaziemir Aviation","x1":855.6,"y1":1045.7,"x2":1213.5,"y2":1249.6},{"airline":"Gaziemir Aviation","x1":1213.5,"y1":1249.6,"x2":813.3,"y2":1059.4},{"airline":"Gaziemir Aviation","x1":813.3,"y1":1059.4,"x2":1213.5,"y2":1249.6},{"airline":"Gaziemir Aviation","x1":1213.5,"y1":1249.6,"x2":1027.9,"y2":922.9},{"airline":"Gaziemir Aviation","x1":1027.9,"y1":922.9,"x2":1213.5,"y2":1249.6},{"airline":"Gaziemir Aviation","x1":1213.5,"y1":1249.6,"x2":950.5,"y2":1016.9},{"airline":"Gaziemir Aviation","x1":950.5,"y1":1016.9,"x2":1213.5,"y2":1249.6},{"airline":"Geneva Jet","x1":781.7,"y1":1028.9,"x2":832,"y2":912.4},{"airline":"Geneva Jet","x1":832,"y1":912.4,"x2":781.7,"y2":1028.9},{"airline":"Geneva Jet","x1":781.7,"y1":1028.9,"x2":708.8,"y2":944.5},{"airline":"Geneva Jet","x1":708.8,"y1":944.5,"x2":781.7,"y2":1028.9},{"airline":"Geneva Jet","x1":781.7,"y1":1028.9,"x2":704.8,"y2":953.3},{"airline":"Geneva Jet","x1":704.8,"y1":953.3,"x2":781.7,"y2":1028.9},{"airline":"Geneva Jet","x1":781.7,"y1":1028.9,"x2":754.1,"y2":837.7},{"airline":"Geneva Jet","x1":754.1,"y1":837.7,"x2":781.7,"y2":1028.9},{"airline":"Geneva Jet","x1":781.7,"y1":1028.9,"x2":845.6,"y2":954.5},{"airline":"Geneva Jet","x1":845.6,"y1":954.5,"x2":781.7,"y2":1028.9},{"airline":"Geneva Jet","x1":781.7,"y1":1028.9,"x2":802.9,"y2":885.4},{"airline":"Geneva Jet","x1":802.9,"y1":885.4,"x2":781.7,"y2":1028.9},{"airline":"Geneva Jet","x1":781.7,"y1":1028.9,"x2":583.1,"y2":1191.2},{"airline":"Geneva Jet","x1":583.1,"y1":1191.2,"x2":781.7,"y2":1028.9},{"airline":"Geneva Jet","x1":781.7,"y1":1028.9,"x2":783.8,"y2":925.1},{"airline":"Geneva Jet","x1":783.8,"y1":925.1,"x2":781.7,"y2":1028.9},{"airline":"Geneva Jet","x1":781.7,"y1":1028.9,"x2":748.4,"y2":884.2},{"airline":"Geneva Jet","x1":748.4,"y1":884.2,"x2":781.7,"y2":1028.9},{"airline":"Geneva Jet","x1":781.7,"y1":1028.9,"x2":907.7,"y2":1155.5},{"airline":"Geneva Jet","x1":907.7,"y1":1155.5,"x2":781.7,"y2":1028.9},{"airline":"Geneva Jet","x1":781.7,"y1":1028.9,"x2":763.3,"y2":1109.9},{"airline":"Geneva Jet","x1":763.3,"y1":1109.9,"x2":781.7,"y2":1028.9},{"airline":"Geneva Jet","x1":781.7,"y1":1028.9,"x2":684.4,"y2":1104.5},{"airline":"Geneva Jet","x1":684.4,"y1":1104.5,"x2":781.7,"y2":1028.9},{"airline":"Geneva Jet","x1":781.7,"y1":1028.9,"x2":805.4,"y2":915},{"airline":"Geneva Jet","x1":805.4,"y1":915,"x2":781.7,"y2":1028.9},{"airline":"Geneva Jet","x1":781.7,"y1":1028.9,"x2":699,"y2":1169.4},{"airline":"Geneva Jet","x1":699,"y1":1169.4,"x2":781.7,"y2":1028.9},{"airline":"Málaga Express","x1":564.1,"y1":1291.4,"x2":372,"y2":1491.9},{"airline":"Málaga Express","x1":372,"y1":1491.9,"x2":564.1,"y2":1291.4},{"airline":"Málaga Express","x1":564.1,"y1":1291.4,"x2":340.8,"y2":1504},{"airline":"Málaga Express","x1":340.8,"y1":1504,"x2":564.1,"y2":1291.4},{"airline":"Málaga Express","x1":564.1,"y1":1291.4,"x2":635,"y2":1159.3},{"airline":"Málaga Express","x1":635,"y1":1159.3,"x2":564.1,"y2":1291.4},{"airline":"Málaga Express","x1":564.1,"y1":1291.4,"x2":583.1,"y2":1191.2},{"airline":"Málaga Express","x1":583.1,"y1":1191.2,"x2":564.1,"y2":1291.4},{"airline":"Málaga Express","x1":564.1,"y1":1291.4,"x2":469,"y2":1236.8},{"airline":"Málaga Express","x1":469,"y1":1236.8,"x2":564.1,"y2":1291.4},{"airline":"Málaga Express","x1":564.1,"y1":1291.4,"x2":712.6,"y2":1216.4},{"airline":"Málaga Express","x1":712.6,"y1":1216.4,"x2":564.1,"y2":1291.4},{"airline":"Málaga Express","x1":564.1,"y1":1291.4,"x2":953.7,"y2":1312.5},{"airline":"Málaga Express","x1":953.7,"y1":1312.5,"x2":564.1,"y2":1291.4},{"airline":"Málaga Express","x1":564.1,"y1":1291.4,"x2":804.4,"y2":1103.7},{"airline":"Málaga Express","x1":804.4,"y1":1103.7,"x2":564.1,"y2":1291.4},{"airline":"Tymbou Airways","x1":1343.7,"y1":1330,"x2":1245.8,"y2":1170},{"airline":"Tymbou Airways","x1":1245.8,"y1":1170,"x2":1343.7,"y2":1330},{"airline":"Bratislava Connect","x1":1009.5,"y1":970.6,"x2":1232.5,"y2":1298.3},{"airline":"Bratislava Connect","x1":1232.5,"y1":1298.3,"x2":1009.5,"y2":970.6},{"airline":"Bratislava Connect","x1":1009.5,"y1":970.6,"x2":1151.8,"y2":1320.5},{"airline":"Bratislava Connect","x1":1151.8,"y1":1320.5,"x2":1009.5,"y2":970.6},{"airline":"Bratislava Connect","x1":1009.5,"y1":970.6,"x2":565.8,"y2":962},{"airline":"Bratislava Connect","x1":565.8,"y1":962,"x2":1009.5,"y2":970.6},{"airline":"Bratislava Connect","x1":1009.5,"y1":970.6,"x2":772.1,"y2":598.6},{"airline":"Bratislava Connect","x1":772.1,"y1":598.6,"x2":1009.5,"y2":970.6},{"airline":"Bratislava Connect","x1":1009.5,"y1":970.6,"x2":1165.8,"y2":577.1},{"airline":"Bratislava Connect","x1":1165.8,"y1":577.1,"x2":1009.5,"y2":970.6},{"airline":"Lisbon Lines","x1":469,"y1":1236.8,"x2":583.1,"y2":1191.2},{"airline":"Lisbon Lines","x1":583.1,"y1":1191.2,"x2":469,"y2":1236.8},{"airline":"Lisbon Lines","x1":469,"y1":1236.8,"x2":708.8,"y2":944.5},{"airline":"Lisbon Lines","x1":708.8,"y1":944.5,"x2":469,"y2":1236.8}],"flights":[{"id":"02a62352-4368-4409-97e9-e105a7c90398","callsign":"AAY016","airline":"Stockholm Lines","strategy":"hub_and_spoke","aircraft":"Narrowbody 160","origin":"HAJ","destination":"ARN","departure":"2026-09-20T19:20:00.000Z","arrival":"2026-09-20T21:05:00.000Z","distanceKm":948,"originLat":52.4611,"originLon":9.6851,"destLat":59.6485,"destLon":17.9288,"pax":133,"seats":160,"heading":33,"altitudeM":10000,"progress":0.615,"from":{"x":855.1,"y":832.6},"to":{"x":1024.2,"y":567.6},"x":951.4,"y":673.2},{"id":"2d0cf23f-ab26-48b6-bbb9-14d725cd3e32","callsign":"AAG020","airline":"Rome Jet","strategy":"aggressive","aircraft":"Narrowbody 160","origin":"ZRH","destination":"FCO","departure":"2026-09-20T19:36:00.000Z","arrival":"2026-09-20T21:01:00.000Z","distanceKm":693,"originLat":47.4581,"originLon":8.5481,"destLat":41.8045,"destLon":12.252,"pax":186,"seats":186,"heading":155,"altitudeM":10000,"progress":0.571,"from":{"x":831.8,"y":992.3},"to":{"x":907.7,"y":1155.5},"x":877,"y":1087},{"id":"b4119fec-94bf-4987-aaf0-b868bfd10071","callsign":"AAD016","airline":"Frankfurt Lines","strategy":"hub_and_spoke","aircraft":"Narrowbody 160","origin":"ARN","destination":"FRA","departure":"2026-09-20T18:43:00.000Z","arrival":"2026-09-20T20:49:00.000Z","distanceKm":1224,"originLat":59.6485,"originLon":17.9288,"destLat":50.0267,"destLon":8.5584,"pax":152,"seats":160,"heading":207,"altitudeM":10000,"progress":0.806,"from":{"x":1024.2,"y":567.6},"to":{"x":832,"y":912.4},"x":862.6,"y":849.9},{"id":"4ba0c0ce-3062-4ed9-962f-e89871177c9c","callsign":"AAD004","airline":"Frankfurt Lines","strategy":"hub_and_spoke","aircraft":"Narrowbody 160","origin":"AGP","destination":"FRA","departure":"2026-09-20T17:45:00.000Z","arrival":"2026-09-20T20:35:00.000Z","distanceKm":1816,"originLat":36.6749,"originLon":-4.4991,"destLat":50.0267,"destLon":8.5584,"pax":149,"seats":160,"heading":39,"altitudeM":5936,"progress":0.939,"from":{"x":564.1,"y":1291.4},"to":{"x":832,"y":912.4},"x":811.7,"y":936.8},{"id":"55a49e31-b400-43e1-8be9-de58e6b0453c","callsign":"AAR020","airline":"Munich Lines","strategy":"hub_and_spoke","aircraft":"Narrowbody 160","origin":"BDS","destination":"MUC","departure":"2026-09-20T18:43:00.000Z","arrival":"2026-09-20T20:31:00.000Z","distanceKm":985,"originLat":40.6576,"originLon":17.947,"destLat":48.3538,"destLon":11.7861,"pax":136,"seats":160,"heading":328,"altitudeM":4968,"progress":0.94,"from":{"x":1024.6,"y":1186.8},"to":{"x":898.2,"y":964.9},"x":906.7,"y":978.7},{"id":"b37e06e2-f9e1-474e-8853-b6825dd95980","callsign":"ABB030","airline":"Prague Jet","strategy":"aggressive","aircraft":"Narrowbody 160","origin":"HHN","destination":"PRG","departure":"2026-09-20T19:48:00.000Z","arrival":"2026-09-20T20:59:00.000Z","distanceKm":500,"originLat":49.9464,"originLon":7.2617,"destLat":50.1009,"destLon":14.2599,"pax":126,"seats":186,"heading":88,"altitudeM":10000,"progress":0.515,"from":{"x":805.4,"y":915},"to":{"x":948.9,"y":910},"x":879.2,"y":910.7},{"id":"276836b1-4471-4b28-9724-ddf58847851f","callsign":"ABB008","airline":"Prague Jet","strategy":"aggressive","aircraft":"Narrowbody 160","origin":"FRA","destination":"PRG","departure":"2026-09-20T20:05:00.000Z","arrival":"2026-09-20T21:09:00.000Z","distanceKm":407,"originLat":50.0267,"originLon":8.5584,"destLat":50.1009,"destLon":14.2599,"pax":186,"seats":186,"heading":88,"altitudeM":7500,"progress":0.306,"from":{"x":832,"y":912.4},"to":{"x":948.9,"y":910},"x":867.7,"y":910.7}],"airlines":[{"name":"Rome Jet","strategy":"aggressive","hub":"FCO","aircraft":12,"routes":42,"flights":41,"pax":7165,"loadFactor":94,"onTime":95.62,"reputation":56.56,"cashEur":50103939.47,"resultEur":107509.07},{"name":"Madrid Express","strategy":"lowcost","hub":"MAD","aircraft":8,"routes":16,"flights":16,"pax":2967,"loadFactor":99.7,"onTime":92.76,"reputation":52.56,"cashEur":50070815.94,"resultEur":70815.94},{"name":"Paris Airways","strategy":"premium","hub":"CDG","aircraft":7,"routes":10,"flights":10,"pax":1436,"loadFactor":97.7,"onTime":91.83,"reputation":51.6,"cashEur":50053887.82,"resultEur":53887.82},{"name":"Colombier-Saugnieu Express","strategy":"lowcost","hub":"LYS","aircraft":8,"routes":16,"flights":16,"pax":2823,"loadFactor":94.9,"onTime":90.88,"reputation":52.52,"cashEur":50051916.52,"resultEur":51916.52},{"name":"Bâle Express","strategy":"lowcost","hub":"BSL","aircraft":8,"routes":16,"flights":16,"pax":2777,"loadFactor":93.3,"onTime":90.76,"reputation":52.55,"cashEur":50050876.05,"resultEur":50876.05},{"name":"Hannover Airways","strategy":"premium","hub":"HAJ","aircraft":7,"routes":12,"flights":12,"pax":1701,"loadFactor":96.4,"onTime":92.15,"reputation":51.92,"cashEur":50050616.55,"resultEur":50616.55},{"name":"Köln Express","strategy":"lowcost","hub":"CGN","aircraft":8,"routes":14,"flights":14,"pax":2500,"loadFactor":96,"onTime":92.46,"reputation":52.24,"cashEur":50046341.08,"resultEur":46341.08},{"name":"Berlin Airways","strategy":"premium","hub":"BER","aircraft":7,"routes":12,"flights":12,"pax":1608,"loadFactor":91.2,"onTime":92.15,"reputation":51.92,"cashEur":50044094.12,"resultEur":44094.12},{"name":"Munich Lines","strategy":"hub_and_spoke","hub":"MUC","aircraft":9,"routes":28,"flights":27,"pax":4160,"loadFactor":96.3,"onTime":94.2,"reputation":54.32,"cashEur":50042405.71,"resultEur":46714.4},{"name":"Prague Jet","strategy":"aggressive","hub":"PRG","aircraft":12,"routes":44,"flights":42,"pax":6263,"loadFactor":80.2,"onTime":90.94,"reputation":56.46,"cashEur":50040823.08,"resultEur":46522.57},{"name":"Frankfurt Lines","strategy":"hub_and_spoke","hub":"FRA","aircraft":9,"routes":22,"flights":20,"pax":3119,"loadFactor":97.5,"onTime":93.32,"reputation":53.2,"cashEur":50038416.73,"resultEur":50073.58},{"name":"Barcelona Airways","strategy":"premium","hub":"BCN","aircraft":7,"routes":10,"flights":10,"pax":1447,"loadFactor":98.4,"onTime":91.83,"reputation":51.6,"cashEur":50037928.14,"resultEur":37928.14},{"name":"Zaventem Lines","strategy":"hub_and_spoke","hub":"BRU","aircraft":9,"routes":24,"flights":24,"pax":3700,"loadFactor":96.4,"onTime":93.84,"reputation":53.84,"cashEur":50036387.75,"resultEur":36387.75},{"name":"Hamburg Lines","strategy":"hub_and_spoke","hub":"HAM","aircraft":9,"routes":28,"flights":28,"pax":3948,"loadFactor":88.1,"onTime":94.32,"reputation":54.48,"cashEur":50025289.84,"resultEur":25289.84},{"name":"Budapest Express","strategy":"lowcost","hub":"BUD","aircraft":8,"routes":16,"flights":16,"pax":2346,"loadFactor":78.8,"onTime":92.76,"reputation":52.56,"cashEur":50020628.01,"resultEur":20628.01},{"name":"Stockholm Lines","strategy":"hub_and_spoke","hub":"ARN","aircraft":7,"routes":22,"flights":21,"pax":2972,"loadFactor":88.5,"onTime":93.45,"reputation":53.36,"cashEur":50019479.14,"resultEur":23667.37},{"name":"London Jet","strategy":"aggressive","hub":"LHR","aircraft":4,"routes":14,"flights":14,"pax":2072,"loadFactor":79.6,"onTime":92.46,"reputation":52.24,"cashEur":50015027.49,"resultEur":15027.49},{"name":"Helsinki Jet","strategy":"aggressive","hub":"HEL","aircraft":2,"routes":8,"flights":8,"pax":1180,"loadFactor":79.3,"onTime":91.49,"reputation":51.28,"cashEur":50008306.79,"resultEur":8306.79},{"name":"Oslo Jet","strategy":"aggressive","hub":"OSL","aircraft":3,"routes":6,"flights":6,"pax":718,"loadFactor":64.3,"onTime":91.14,"reputation":50.96,"cashEur":50002429.85,"resultEur":2429.85},{"name":"Amsterdam Air","strategy":"point_to_point","hub":"AMS","aircraft":7,"routes":12,"flights":0,"pax":0,"loadFactor":0,"onTime":90,"reputation":50,"cashEur":50000000,"resultEur":0},{"name":"Ankara Air","strategy":"point_to_point","hub":"ESB","aircraft":4,"routes":8,"flights":0,"pax":0,"loadFactor":0,"onTime":90,"reputation":50,"cashEur":50000000,"resultEur":0},{"name":"Antalya Air","strategy":"point_to_point","hub":"AYT","aircraft":7,"routes":14,"flights":0,"pax":0,"loadFactor":0,"onTime":90,"reputation":50,"cashEur":50000000,"resultEur":0},{"name":"Belgrade Air","strategy":"point_to_point","hub":"BEG","aircraft":2,"routes":4,"flights":0,"pax":0,"loadFactor":0,"onTime":90,"reputation":50,"cashEur":50000000,"resultEur":0},{"name":"Bratislava Connect","strategy":"regional","hub":"BTS","aircraft":6,"routes":10,"flights":0,"pax":0,"loadFactor":0,"onTime":90,"reputation":50,"cashEur":50000000,"resultEur":0},{"name":"Chişinău Airways","strategy":"premium","hub":"RMO","aircraft":3,"routes":6,"flights":0,"pax":0,"loadFactor":0,"onTime":90,"reputation":50,"cashEur":50000000,"resultEur":0},{"name":"Clermont-Ferrand Airways","strategy":"premium","hub":"CFE","aircraft":7,"routes":14,"flights":0,"pax":0,"loadFactor":0,"onTime":90,"reputation":50,"cashEur":50000000,"resultEur":0},{"name":"Copenhagen Air","strategy":"point_to_point","hub":"CPH","aircraft":7,"routes":12,"flights":0,"pax":0,"loadFactor":0,"onTime":90,"reputation":50,"cashEur":50000000,"resultEur":0},{"name":"Dublin Express","strategy":"lowcost","hub":"DUB","aircraft":2,"routes":4,"flights":0,"pax":0,"loadFactor":0,"onTime":90,"reputation":50,"cashEur":50000000,"resultEur":0},{"name":"Feldkirchen bei Graz Connect","strategy":"regional","hub":"GRZ","aircraft":6,"routes":10,"flights":0,"pax":0,"loadFactor":0,"onTime":90,"reputation":50,"cashEur":50000000,"resultEur":0},{"name":"Ferno Aviation","strategy":"conservative","hub":"MXP","aircraft":4,"routes":6,"flights":0,"pax":0,"loadFactor":0,"onTime":90,"reputation":50,"cashEur":50000000,"resultEur":0},{"name":"Gaziemir Aviation","strategy":"conservative","hub":"ADB","aircraft":4,"routes":8,"flights":0,"pax":0,"loadFactor":0,"onTime":90,"reputation":50,"cashEur":50000000,"resultEur":0},{"name":"Geneva Jet","strategy":"aggressive","hub":"GVA","aircraft":8,"routes":28,"flights":0,"pax":0,"loadFactor":0,"onTime":90,"reputation":50,"cashEur":50000000,"resultEur":0},{"name":"Istanbul Connect","strategy":"regional","hub":"IST","aircraft":6,"routes":10,"flights":0,"pax":0,"loadFactor":0,"onTime":90,"reputation":50,"cashEur":50000000,"resultEur":0},{"name":"Jasionka Aviation","strategy":"conservative","hub":"RZE","aircraft":4,"routes":8,"flights":0,"pax":0,"loadFactor":0,"onTime":90,"reputation":50,"cashEur":50000000,"resultEur":0},{"name":"Konya Aviation","strategy":"conservative","hub":"KYA","aircraft":4,"routes":6,"flights":0,"pax":0,"loadFactor":0,"onTime":90,"reputation":50,"cashEur":50000000,"resultEur":0},{"name":"Lisbon Lines","strategy":"hub_and_spoke","hub":"LIS","aircraft":2,"routes":4,"flights":0,"pax":0,"loadFactor":0,"onTime":90,"reputation":50,"cashEur":50000000,"resultEur":0},{"name":"London Express","strategy":"lowcost","hub":"LGW","aircraft":2,"routes":4,"flights":0,"pax":0,"loadFactor":0,"onTime":90,"reputation":50,"cashEur":50000000,"resultEur":0},{"name":"Luxembourg Airways","strategy":"premium","hub":"LUX","aircraft":7,"routes":14,"flights":0,"pax":0,"loadFactor":0,"onTime":90,"reputation":50,"cashEur":50000000,"resultEur":0},{"name":"Marignane Jet","strategy":"aggressive","hub":"MRS","aircraft":12,"routes":42,"flights":0,"pax":0,"loadFactor":0,"onTime":90,"reputation":50,"cashEur":50000000,"resultEur":0},{"name":"Minsk Airways","strategy":"premium","hub":"MSQ","aircraft":0,"routes":0,"flights":0,"pax":0,"loadFactor":0,"onTime":90,"reputation":50,"cashEur":50000000,"resultEur":0},{"name":"Málaga Express","strategy":"lowcost","hub":"AGP","aircraft":8,"routes":16,"flights":0,"pax":0,"loadFactor":0,"onTime":90,"reputation":50,"cashEur":50000000,"resultEur":0},{"name":"Otopeni Lines","strategy":"hub_and_spoke","hub":"OTP","aircraft":6,"routes":18,"flights":0,"pax":0,"loadFactor":0,"onTime":90,"reputation":50,"cashEur":50000000,"resultEur":0},{"name":"Palermo Jet","strategy":"aggressive","hub":"PMO","aircraft":12,"routes":36,"flights":0,"pax":0,"loadFactor":0,"onTime":90,"reputation":50,"cashEur":50000000,"resultEur":0},{"name":"Palma Air","strategy":"point_to_point","hub":"PMI","aircraft":7,"routes":10,"flights":0,"pax":0,"loadFactor":0,"onTime":90,"reputation":50,"cashEur":50000000,"resultEur":0},{"name":"Paris Connect","strategy":"regional","hub":"ORY","aircraft":6,"routes":10,"flights":0,"pax":0,"loadFactor":0,"onTime":90,"reputation":50,"cashEur":50000000,"resultEur":0},{"name":"Pendik Connect","strategy":"regional","hub":"SAW","aircraft":6,"routes":10,"flights":0,"pax":0,"loadFactor":0,"onTime":90,"reputation":50,"cashEur":50000000,"resultEur":0},{"name":"Schkeuditz Aviation","strategy":"conservative","hub":"LEJ","aircraft":4,"routes":4,"flights":0,"pax":0,"loadFactor":0,"onTime":90,"reputation":50,"cashEur":50000000,"resultEur":0},{"name":"Spata-Artemida Connect","strategy":"regional","hub":"ATH","aircraft":6,"routes":10,"flights":0,"pax":0,"loadFactor":0,"onTime":90,"reputation":50,"cashEur":50000000,"resultEur":0},{"name":"Stuttgart Connect","strategy":"regional","hub":"STR","aircraft":6,"routes":10,"flights":0,"pax":0,"loadFactor":0,"onTime":90,"reputation":50,"cashEur":50000000,"resultEur":0},{"name":"Tarsus Express","strategy":"lowcost","hub":"COV","aircraft":4,"routes":8,"flights":0,"pax":0,"loadFactor":0,"onTime":90,"reputation":50,"cashEur":50000000,"resultEur":0},{"name":"Thessaloniki Lines","strategy":"hub_and_spoke","hub":"SKG","aircraft":5,"routes":16,"flights":0,"pax":0,"loadFactor":0,"onTime":90,"reputation":50,"cashEur":50000000,"resultEur":0},{"name":"Toulouse Aviation","strategy":"conservative","hub":"TLS","aircraft":4,"routes":4,"flights":0,"pax":0,"loadFactor":0,"onTime":90,"reputation":50,"cashEur":50000000,"resultEur":0},{"name":"Tymbou Airways","strategy":"premium","hub":"ECN","aircraft":1,"routes":2,"flights":0,"pax":0,"loadFactor":0,"onTime":90,"reputation":50,"cashEur":50000000,"resultEur":0},{"name":"Valletta Air","strategy":"point_to_point","hub":"MLA","aircraft":7,"routes":12,"flights":0,"pax":0,"loadFactor":0,"onTime":90,"reputation":50,"cashEur":50000000,"resultEur":0},{"name":"Venezia Lines","strategy":"hub_and_spoke","hub":"VCE","aircraft":9,"routes":24,"flights":0,"pax":0,"loadFactor":0,"onTime":90,"reputation":50,"cashEur":50000000,"resultEur":0},{"name":"Vienna Air","strategy":"point_to_point","hub":"VIE","aircraft":7,"routes":14,"flights":0,"pax":0,"loadFactor":0,"onTime":90,"reputation":50,"cashEur":50000000,"resultEur":0},{"name":"Warsaw Connect","strategy":"regional","hub":"WAW","aircraft":6,"routes":10,"flights":0,"pax":0,"loadFactor":0,"onTime":90,"reputation":50,"cashEur":50000000,"resultEur":0},{"name":"Zaragoza Aviation","strategy":"conservative","hub":"ZAZ","aircraft":4,"routes":6,"flights":0,"pax":0,"loadFactor":0,"onTime":90,"reputation":50,"cashEur":50000000,"resultEur":0},{"name":"Zurich Aviation","strategy":"conservative","hub":"ZRH","aircraft":4,"routes":6,"flights":0,"pax":0,"loadFactor":0,"onTime":90,"reputation":50,"cashEur":50000000,"resultEur":0},{"name":"Şanlıurfa Connect","strategy":"regional","hub":"GNY","aircraft":6,"routes":10,"flights":0,"pax":0,"loadFactor":0,"onTime":90,"reputation":50,"cashEur":50000000,"resultEur":0}]}
+</script>
+
+<script>
+  (function () {
+    'use strict';
+
+    var DATA = JSON.parse(document.getElementById('snapshot').textContent);
+    var VIEW = DATA.map.view;
+    var PROJ = DATA.projection;
+
+    /* ─── Proyección ────────────────────────────────────────────────
+     * Los mismos parámetros con los que se dibujó el mapa, que viajan con
+     * los datos. Vive en el cliente porque el cliente necesita situar
+     * puntos que se mueven: un avión no se pide al servidor cada segundo,
+     * se calcula.
+     */
+    function mercY(lat) {
+      return Math.log(Math.tan(Math.PI / 4 + (lat * Math.PI) / 360));
+    }
+
+    function project(lon, lat) {
+      return {
+        x: PROJ.translateX + PROJ.scale * lon * (Math.PI / 180),
+        y: PROJ.translateY - PROJ.scale * mercY(lat),
+      };
+    }
+
+    /* ─── Posición de un avión ──────────────────────────────────────
+     * Interpolación esférica sobre el arco de círculo máximo, idéntica a
+     * la del dominio. Es la pieza que permite que el servidor no guarde
+     * ni difunda posiciones: todos los clientes calculan lo mismo.
+     */
+    var RAD = Math.PI / 180;
+    var DEG = 180 / Math.PI;
+
+    function slerp(lat1, lon1, lat2, lon2, f) {
+      var p1 = lat1 * RAD;
+      var l1 = lon1 * RAD;
+      var p2 = lat2 * RAD;
+      var l2 = lon2 * RAD;
+
+      var d =
+        2 *
+        Math.asin(
+          Math.min(
+            1,
+            Math.sqrt(
+              Math.pow(Math.sin((p2 - p1) / 2), 2) +
+                Math.cos(p1) * Math.cos(p2) * Math.pow(Math.sin((l2 - l1) / 2), 2)
+            )
+          )
+        );
+
+      if (d < 1e-9) return { lat: lat1, lon: lon1 };
+
+      var a = Math.sin((1 - f) * d) / Math.sin(d);
+      var b = Math.sin(f * d) / Math.sin(d);
+      var x = a * Math.cos(p1) * Math.cos(l1) + b * Math.cos(p2) * Math.cos(l2);
+      var y = a * Math.cos(p1) * Math.sin(l1) + b * Math.cos(p2) * Math.sin(l2);
+      var z = a * Math.sin(p1) + b * Math.sin(p2);
+
+      return { lat: Math.atan2(z, Math.hypot(x, y)) * DEG, lon: Math.atan2(y, x) * DEG };
+    }
+
+    function bearing(lat1, lon1, lat2, lon2) {
+      var p1 = lat1 * RAD;
+      var p2 = lat2 * RAD;
+      var dl = (lon2 - lon1) * RAD;
+      var y = Math.sin(dl) * Math.cos(p2);
+      var x = Math.cos(p1) * Math.sin(p2) - Math.sin(p1) * Math.cos(p2) * Math.cos(dl);
+      return (Math.atan2(y, x) * DEG + 360) % 360;
+    }
+
+    /* ─── Formato ───────────────────────────────────────────────────── */
+
+    var nf = new Intl.NumberFormat('es-ES');
+    var ef = new Intl.NumberFormat('es-ES', {
+      style: 'currency',
+      currency: 'EUR',
+      maximumFractionDigits: 0,
+    });
+
+    function hhmm(iso) {
+      var d = new Date(iso);
+      return (
+        String(d.getUTCHours()).padStart(2, '0') + ':' + String(d.getUTCMinutes()).padStart(2, '0')
+      );
+    }
+
+    function compact(value) {
+      if (Math.abs(value) >= 1e6) return (value / 1e6).toFixed(1).replace('.', ',') + ' M';
+      if (Math.abs(value) >= 1e3) return Math.round(value / 1e3) + ' k';
+      return String(Math.round(value));
+    }
+
+    function el(tag, attrs) {
+      var node = document.createElementNS('http://www.w3.org/2000/svg', tag);
+      for (var key in attrs) node.setAttribute(key, attrs[key]);
+      return node;
+    }
+
+    /* ─── Construcción del mapa ─────────────────────────────────────── */
+
+    var svg = document.getElementById('map');
+    svg.setAttribute('viewBox', '0 0 ' + VIEW.width + ' ' + VIEW.height);
+    svg.setAttribute('preserveAspectRatio', 'xMidYMid slice');
+
+    var gRoot = el('g', {});
+    var gLand = el('g', {});
+    var gRoutes = el('g', {});
+    var gAirports = el('g', {});
+    var gLabels = el('g', {});
+    var gTracks = el('g', {});
+    var gPlanes = el('g', {});
+    gRoot.appendChild(gLand);
+    gRoot.appendChild(gRoutes);
+    gRoot.appendChild(gAirports);
+    gRoot.appendChild(gLabels);
+    gRoot.appendChild(gTracks);
+    gRoot.appendChild(gPlanes);
+    svg.appendChild(gRoot);
+
+    // La tierra es una sola masa rellena; las fronteras van encima, sólo
+    // trazadas. Separarlas evita los agujeros que deja rellenar país a país.
+    gLand.appendChild(el('path', { d: DATA.map.land, class: 'land' }));
+    gLand.appendChild(el('path', { d: DATA.map.borders, class: 'border' }));
+
+    /* Las rutas se dibujan con una ligera comba. Un arco se distingue del
+     * siguiente cuando dos compañías sirven el mismo par, y además insinúa
+     * la trayectoria real, que no es una recta sobre el papel. */
+    var routeNodes = DATA.routes.map(function (r) {
+      var mx = (r.x1 + r.x2) / 2;
+      var my = (r.y1 + r.y2) / 2;
+      var dx = r.x2 - r.x1;
+      var dy = r.y2 - r.y1;
+      var len = Math.hypot(dx, dy) || 1;
+      var bow = Math.min(len * 0.11, 46);
+      var node = el('path', {
+        d:
+          'M' + r.x1 + ',' + r.y1 +
+          ' Q' + (mx - (dy / len) * bow) + ',' + (my + (dx / len) * bow) +
+          ' ' + r.x2 + ',' + r.y2,
+        class: 'route',
+      });
+      gRoutes.appendChild(node);
+      return { airline: r.airline, node: node };
+    });
+
+    function highlightNetwork(name) {
+      routeNodes.forEach(function (r) {
+        r.node.classList.toggle('mine', r.airline === name);
+      });
+    }
+
+    var airportNodes = {};
+
+    DATA.airports.forEach(function (a) {
+      var major = a.size >= 4;
+      var dot = el('circle', {
+        cx: a.x,
+        cy: a.y,
+        r: major ? 2.6 : 1.7,
+        class: 'apt' + (major ? ' major' : ''),
+      });
+      var hit = el('circle', { cx: a.x, cy: a.y, r: 9, class: 'apt-hit' });
+      hit.addEventListener('click', function (e) {
+        e.stopPropagation();
+        selectAirport(a.iata);
+      });
+      gAirports.appendChild(dot);
+      gAirports.appendChild(hit);
+
+      var label = el('text', { x: a.x + 5, y: a.y + 3, class: 'apt-label' });
+      label.textContent = a.iata;
+      label.dataset.size = String(a.size);
+      gLabels.appendChild(label);
+
+      airportNodes[a.iata] = { data: a, dot: dot, label: label };
+    });
+
+    /* ─── Vuelos ────────────────────────────────────────────────────── */
+
+    var planes = DATA.flights.map(function (f) {
+      var group = el('g', { class: 'plane-group' });
+      var ring = el('circle', { r: 7, class: 'plane-ring', opacity: 0 });
+      var body = el('path', { d: 'M0,-5.4 L3.6,4.6 L0,2.6 L-3.6,4.6 Z', class: 'plane' });
+      var tag = el('text', { x: 10, y: 3.5, class: 'plane-tag' });
+      tag.textContent = f.callsign;
+
+      body.addEventListener('click', function (e) {
+        e.stopPropagation();
+        selectFlight(f.id);
+      });
+
+      group.appendChild(ring);
+      group.appendChild(body);
+      group.appendChild(tag);
+      gPlanes.appendChild(group);
+
+      var track = el('path', { class: 'track' });
+      gTracks.appendChild(track);
+
+      return { f: f, group: group, body: body, ring: ring, tag: tag, track: track, pos: null };
+    });
+
+    var planeById = {};
+    planes.forEach(function (p) {
+      planeById[p.f.id] = p;
+    });
+
+    /* ─── Cámara ────────────────────────────────────────────────────── */
+
+    var cam = { k: 1, x: 0, y: 0 };
+
+    function applyCam() {
+      gRoot.setAttribute(
+        'transform',
+        'translate(' + cam.x + ',' + cam.y + ') scale(' + cam.k + ')'
+      );
+
+      // Los símbolos mantienen su tamaño en pantalla al acercar: un punto de
+      // aeropuerto que creciera con el zoom taparía justo lo que se quiere ver.
+      var inv = 1 / cam.k;
+      Object.keys(airportNodes).forEach(function (code) {
+        var node = airportNodes[code];
+        var major = node.data.size >= 4;
+        node.dot.setAttribute('r', String((major ? 2.6 : 1.7) * inv));
+        var visible = labelsOn && node.data.size >= labelThreshold();
+        node.label.style.display = visible ? '' : 'none';
+        node.label.setAttribute('transform', labelTransform(node.data, inv));
+      });
+
+      planes.forEach(function (p) {
+        p.tag.setAttribute('transform', 'scale(' + inv + ')');
+        p.tag.setAttribute('x', String(10));
+        p.tag.setAttribute('y', String(3.5));
+      });
+
+      render();
+      updateScale();
+    }
+
+    /** Latitud que corresponde a una coordenada y del encuadre. */
+    function unprojectLat(y) {
+      return (2 * Math.atan(Math.exp((PROJ.translateY - y) / PROJ.scale)) - Math.PI / 2) * DEG;
+    }
+
+    function labelTransform(a, inv) {
+      return 'translate(' + a.x + ',' + a.y + ') scale(' + inv + ') translate(5,3)';
+    }
+
+    function labelThreshold() {
+      if (cam.k >= 6) return 1;
+      if (cam.k >= 3.2) return 2;
+      if (cam.k >= 1.9) return 3;
+      return 4;
+    }
+
+    function updateScale() {
+      // Un grado de longitud a la latitud del centro del encuadre, en km.
+      var midLat = unprojectLat(VIEW.height / 2);
+      var kmPerDeg = 111.32 * Math.cos(midLat * RAD);
+      var pxPerDeg = PROJ.scale * RAD * cam.k;
+      var target = 140;
+      var km = (target / pxPerDeg) * kmPerDeg;
+      var step = Math.pow(10, Math.floor(Math.log10(km)));
+      var nice = [1, 2, 5, 10].map(function (m) { return m * step; })
+        .reduce(function (best, v) { return Math.abs(v - km) < Math.abs(best - km) ? v : best; });
+      document.getElementById('scalebar').textContent =
+        '◀ ' + nf.format(Math.round(nice)) + ' km ▶   ·   ×' + cam.k.toFixed(1);
+    }
+
+    function clampCam() {
+      var rect = svg.getBoundingClientRect();
+      var scaleToFit = Math.max(rect.width / VIEW.width, rect.height / VIEW.height);
+      var w = VIEW.width * scaleToFit * cam.k;
+      var h = VIEW.height * scaleToFit * cam.k;
+      var maxX = Math.max(0, (w - rect.width) / 2 / scaleToFit);
+      var maxY = Math.max(0, (h - rect.height) / 2 / scaleToFit);
+      cam.x = Math.max(-maxX * cam.k, Math.min(maxX * cam.k, cam.x));
+      cam.y = Math.max(-maxY * cam.k, Math.min(maxY * cam.k, cam.y));
+    }
+
+    function zoomAt(factor, cx, cy) {
+      var next = Math.max(1, Math.min(14, cam.k * factor));
+      var ratio = next / cam.k;
+      cam.x = cx - (cx - cam.x) * ratio;
+      cam.y = cy - (cy - cam.y) * ratio;
+      cam.k = next;
+      clampCam();
+      applyCam();
+    }
+
+    function svgPoint(evt) {
+      var rect = svg.getBoundingClientRect();
+      var scaleToFit = Math.max(rect.width / VIEW.width, rect.height / VIEW.height);
+      return {
+        x: (evt.clientX - rect.left - (rect.width - VIEW.width * scaleToFit) / 2) / scaleToFit,
+        y: (evt.clientY - rect.top - (rect.height - VIEW.height * scaleToFit) / 2) / scaleToFit,
+      };
+    }
+
+    svg.addEventListener(
+      'wheel',
+      function (e) {
+        e.preventDefault();
+        var p = svgPoint(e);
+        zoomAt(e.deltaY < 0 ? 1.18 : 1 / 1.18, p.x, p.y);
+      },
+      { passive: false }
+    );
+
+    var drag = null;
+
+    svg.addEventListener('pointerdown', function (e) {
+      drag = { x: e.clientX, y: e.clientY, cx: cam.x, cy: cam.y, moved: false };
+      svg.setPointerCapture(e.pointerId);
+      svg.classList.add('dragging');
+    });
+
+    svg.addEventListener('pointermove', function (e) {
+      if (drag === null) return;
+      var rect = svg.getBoundingClientRect();
+      var scaleToFit = Math.max(rect.width / VIEW.width, rect.height / VIEW.height);
+      cam.x = drag.cx + (e.clientX - drag.x) / scaleToFit;
+      cam.y = drag.cy + (e.clientY - drag.y) / scaleToFit;
+      if (Math.hypot(e.clientX - drag.x, e.clientY - drag.y) > 3) drag.moved = true;
+      clampCam();
+      applyCam();
+    });
+
+    function endDrag(e) {
+      if (drag !== null) {
+        svg.releasePointerCapture(e.pointerId);
+        svg.classList.remove('dragging');
+      }
+      drag = null;
+    }
+
+    svg.addEventListener('pointerup', endDrag);
+    svg.addEventListener('pointercancel', endDrag);
+
+    document.getElementById('z-in').addEventListener('click', function () {
+      zoomAt(1.45, VIEW.width / 2, VIEW.height / 2);
+    });
+    document.getElementById('z-out').addEventListener('click', function () {
+      zoomAt(1 / 1.45, VIEW.width / 2, VIEW.height / 2);
+    });
+    document.getElementById('z-reset').addEventListener('click', function () {
+      cam = { k: 1, x: 0, y: 0 };
+      applyCam();
+    });
+
+    /* ─── Capas ─────────────────────────────────────────────────────── */
+
+    var routesOn = true;
+    var labelsOn = true;
+    var tracksOn = true;
+
+    function toggle(id, apply) {
+      var btn = document.getElementById(id);
+      btn.addEventListener('click', function () {
+        var next = btn.getAttribute('aria-pressed') !== 'true';
+        btn.setAttribute('aria-pressed', String(next));
+        apply(next);
+      });
+    }
+
+    toggle('l-routes', function (on) {
+      routesOn = on;
+      gRoutes.style.display = on ? '' : 'none';
+    });
+    toggle('l-labels', function (on) {
+      labelsOn = on;
+      applyCam();
+    });
+    toggle('l-tracks', function (on) {
+      tracksOn = on;
+      gTracks.style.display = on ? '' : 'none';
+    });
+
+    /* ─── Selección ─────────────────────────────────────────────────── */
+
+    var selected = { kind: 'flight', id: planes.length > 0 ? planes[0].f.id : null };
+
+    function selectFlight(id) {
+      selected = { kind: 'flight', id: id };
+      renderInspector();
+      renderStrip();
+      render();
+    }
+
+    function selectAirport(iata) {
+      selected = { kind: 'airport', id: iata };
+      renderInspector();
+      renderStrip();
+      render();
+    }
+
+    function selectAirline(name) {
+      selected = { kind: 'airline', id: name };
+      renderCarrier(name);
+      renderBoard();
+      renderInspector();
+    }
+
+    /* ─── Bucle de posiciones ───────────────────────────────────────── */
+
+    function positionOf(f, now) {
+      var dep = Date.parse(f.departure);
+      var arr = Date.parse(f.arrival);
+      var total = arr - dep;
+      var t = total <= 0 ? 1 : Math.max(0, Math.min(1, (now - dep) / total));
+      var here = slerp(f.originLat, f.originLon, f.destLat, f.destLon, t);
+      var pt = project(here.lon, here.lat);
+      var hdg = t >= 1 ? f.heading : bearing(here.lat, here.lon, f.destLat, f.destLon);
+      return { x: pt.x, y: pt.y, t: t, heading: hdg, lat: here.lat, lon: here.lon };
+    }
+
+    function greatCirclePath(f, from, to) {
+      var steps = 24;
+      var d = '';
+      for (var i = 0; i <= steps; i++) {
+        var seg = slerp(f.originLat, f.originLon, f.destLat, f.destLon, from + ((to - from) * i) / steps);
+        var pt = project(seg.lon, seg.lat);
+        d += (i === 0 ? 'M' : 'L') + pt.x.toFixed(1) + ',' + pt.y.toFixed(1);
+      }
+      return d;
+    }
+
+    function render() {
+      var now = Date.now();
+      var inv = 1 / cam.k;
+
+      planes.forEach(function (p) {
+        var pos = positionOf(p.f, now);
+        p.pos = pos;
+        p.group.setAttribute(
+          'transform',
+          'translate(' + pos.x.toFixed(2) + ',' + pos.y.toFixed(2) + ') scale(' + inv + ') rotate(' + pos.heading.toFixed(1) + ')'
+        );
+        // La etiqueta no gira con el avión: un texto cabeza abajo no se lee.
+        p.tag.setAttribute('transform', 'rotate(' + (-pos.heading).toFixed(1) + ')');
+
+        var isOn = selected.kind === 'flight' && selected.id === p.f.id;
+        p.ring.setAttribute('opacity', isOn ? '0.85' : '0');
+        p.tag.style.display = isOn || cam.k >= 2.4 ? '' : 'none';
+        p.track.setAttribute('d', greatCirclePath(p.f, 0, 1));
+        p.track.style.opacity = isOn ? '0.95' : '0.34';
+      });
+
+      Object.keys(airportNodes).forEach(function (code) {
+        var node = airportNodes[code];
+        var isOn = selected.kind === 'airport' && selected.id === code;
+        node.dot.setAttribute('fill', isOn ? 'var(--signal)' : '');
+        node.dot.setAttribute('r', String((node.data.size >= 4 ? 2.6 : 1.7) * (isOn ? 2.1 : 1) * inv));
+      });
+    }
+
+    /* ─── Paneles ───────────────────────────────────────────────────── */
+
+    function renderTopbar() {
+      document.getElementById('world-name').textContent =
+        DATA.world.name + ' · ' + DATA.airports.length + ' aeropuertos';
+      document.getElementById('t-air').textContent = String(DATA.flights.length);
+      document.getElementById('t-flights').textContent = nf.format(DATA.totals.flights);
+      document.getElementById('t-pax').textContent = compact(DATA.totals.pax);
+      document.getElementById('t-lf').textContent =
+        (DATA.totals.loadFactor * 100).toFixed(1).replace('.', ',') + '%';
+      document.getElementById('t-otp').textContent =
+        DATA.totals.onTimePercent.toFixed(1).replace('.', ',') + '%';
+      document.getElementById('t-fuel').textContent =
+        DATA.world.fuelPriceEurPerKg.toFixed(2).replace('.', ',') + ' €';
+    }
+
+    function initials(name) {
+      return name
+        .split(/\s+/)
+        .filter(Boolean)
+        .slice(0, 2)
+        .map(function (w) { return w[0]; })
+        .join('')
+        .toUpperCase();
+    }
+
+    function renderCarrier(name) {
+      var a = DATA.airlines.filter(function (x) { return x.name === name; })[0] || DATA.airlines[0];
+      if (!a) return;
+      document.getElementById('c-tail').textContent = initials(a.name);
+      document.getElementById('c-name').textContent = a.name;
+      document.getElementById('c-sub').textContent =
+        'HUB ' + a.hub + ' · ' + (a.strategy || 'jugador').replace(/_/g, ' ');
+      document.getElementById('c-fleet').textContent = String(a.aircraft);
+      document.getElementById('c-routes').textContent = String(a.routes);
+      document.getElementById('c-lf').innerHTML =
+        a.loadFactor.toFixed(1).replace('.', ',') + '<small>%</small>';
+      document.getElementById('c-otp').innerHTML =
+        a.onTime.toFixed(1).replace('.', ',') + '<small>%</small>';
+      document.getElementById('c-pax').textContent = compact(a.pax);
+      var result = document.getElementById('c-result');
+      result.textContent = (a.resultEur >= 0 ? '+' : '−') + compact(Math.abs(a.resultEur)) + ' €';
+      result.className = 'v ' + (a.resultEur >= 0 ? 'gain' : 'loss');
+    }
+
+    function renderBoard() {
+      var body = document.getElementById('board');
+      body.textContent = '';
+      DATA.airlines.slice(0, 12).forEach(function (a) {
+        var tr = document.createElement('tr');
+        if (selected.kind === 'airline' && selected.id === a.name) tr.className = 'on';
+        if (currentCarrier === a.name) tr.className = 'on';
+
+        var name = document.createElement('td');
+        name.textContent = a.name;
+        var hub = document.createElement('span');
+        hub.className = 'hub';
+        hub.textContent = a.hub;
+        name.appendChild(hub);
+        name.title = a.name + ' · hub ' + a.hub;
+
+        var lf = document.createElement('td');
+        lf.textContent = a.loadFactor.toFixed(0) + '%';
+
+        var res = document.createElement('td');
+        res.textContent = (a.resultEur >= 0 ? '+' : '−') + compact(Math.abs(a.resultEur));
+        res.className = a.resultEur >= 0 ? 'gain' : 'loss';
+
+        tr.appendChild(name);
+        tr.appendChild(lf);
+        tr.appendChild(res);
+        tr.addEventListener('click', function () {
+          currentCarrier = a.name;
+          renderCarrier(a.name);
+          renderBoard();
+          highlightNetwork(a.name);
+        });
+        body.appendChild(tr);
+      });
+    }
+
+    function renderStrip() {
+      var box = document.getElementById('strip');
+      box.textContent = '';
+
+      if (DATA.flights.length === 0) {
+        var empty = document.createElement('div');
+        empty.className = 'strip-row';
+        empty.textContent = 'Sin tráfico en este instante';
+        box.appendChild(empty);
+        return;
+      }
+
+      DATA.flights.forEach(function (f) {
+        var row = document.createElement('div');
+        row.className =
+          'strip-row' + (selected.kind === 'flight' && selected.id === f.id ? ' on' : '');
+
+        var cs = document.createElement('span');
+        cs.className = 'cs';
+        cs.textContent = f.callsign;
+
+        var leg = document.createElement('span');
+        leg.textContent = f.origin + ' → ' + f.destination;
+
+        var pr = document.createElement('span');
+        pr.className = 'pr';
+        var p = planeById[f.id];
+        pr.textContent = Math.round((p && p.pos ? p.pos.t : f.progress) * 100) + '%';
+
+        row.appendChild(cs);
+        row.appendChild(leg);
+        row.appendChild(pr);
+        row.addEventListener('click', function () { selectFlight(f.id); });
+        box.appendChild(row);
+      });
+    }
+
+    function dl(rows) {
+      var wrap = document.createElement('dl');
+      wrap.className = 'rows';
+      rows.forEach(function (r) {
+        var row = document.createElement('div');
+        row.className = 'row';
+        var dt = document.createElement('dt');
+        dt.textContent = r[0];
+        var dd = document.createElement('dd');
+        dd.textContent = r[1];
+        if (r[2]) dd.className = r[2];
+        row.appendChild(dt);
+        row.appendChild(dd);
+        wrap.appendChild(row);
+      });
+      return wrap;
+    }
+
+    function section(title) {
+      var s = document.createElement('div');
+      s.className = 'section';
+      var h = document.createElement('h2');
+      h.textContent = title;
+      s.appendChild(h);
+      return s;
+    }
+
+    function renderInspector() {
+      var host = document.getElementById('inspector');
+      host.textContent = '';
+
+      if (selected.kind === 'airport') return renderAirportPanel(host);
+      if (selected.kind === 'flight' && selected.id) return renderFlightPanel(host);
+      renderHelpPanel(host);
+    }
+
+    function renderFlightPanel(host) {
+      var f = DATA.flights.filter(function (x) { return x.id === selected.id; })[0];
+      if (!f) return renderHelpPanel(host);
+
+      var p = planeById[f.id];
+      var t = p && p.pos ? p.pos.t : f.progress;
+      var remaining = Math.max(0, Math.round((Date.parse(f.arrival) - Date.now()) / 60000));
+
+      var s = section('Vuelo seleccionado');
+
+      var head = document.createElement('div');
+      head.style.display = 'flex';
+      head.style.justifyContent = 'space-between';
+      head.style.alignItems = 'center';
+      head.style.marginBottom = '10px';
+
+      var cs = document.createElement('div');
+      cs.style.fontFamily = 'var(--mono)';
+      cs.style.fontSize = '20px';
+      cs.style.fontWeight = '600';
+      cs.style.letterSpacing = '0.03em';
+      cs.textContent = f.callsign;
+
+      var pill = document.createElement('span');
+      pill.className = 'pill';
+      pill.textContent = t >= 1 ? 'Aterrizado' : 'En vuelo';
+
+      head.appendChild(cs);
+      head.appendChild(pill);
+      s.appendChild(head);
+
+      var leg = document.createElement('div');
+      leg.className = 'leg';
+
+      var from = document.createElement('div');
+      var fromCode = document.createElement('div');
+      fromCode.className = 'code';
+      fromCode.textContent = f.origin;
+      var fromCity = document.createElement('div');
+      fromCity.className = 'city';
+      fromCity.textContent = hhmm(f.departure);
+      from.appendChild(fromCode);
+      from.appendChild(fromCity);
+
+      var wire = document.createElement('div');
+      wire.className = 'wire';
+      var marker = document.createElement('i');
+      marker.style.left = (t * 100).toFixed(1) + '%';
+      wire.appendChild(marker);
+
+      var to = document.createElement('div');
+      to.style.textAlign = 'right';
+      var toCode = document.createElement('div');
+      toCode.className = 'code';
+      toCode.textContent = f.destination;
+      var toCity = document.createElement('div');
+      toCity.className = 'city';
+      toCity.textContent = hhmm(f.arrival);
+      to.appendChild(toCode);
+      to.appendChild(toCity);
+
+      leg.appendChild(from);
+      leg.appendChild(wire);
+      leg.appendChild(to);
+      s.appendChild(leg);
+
+      s.appendChild(
+        dl([
+          ['Compañía', f.airline],
+          ['Aeronave', f.aircraft],
+          ['Pasajeros', nf.format(f.pax) + ' / ' + nf.format(f.seats)],
+          ['Ocupación', Math.round((f.pax / f.seats) * 100) + ' %'],
+          ['Distancia', nf.format(f.distanceKm) + ' km'],
+          ['Altitud', nf.format(p && p.pos ? Math.round(altitudeAt(t, f.distanceKm)) : f.altitudeM) + ' m'],
+          ['Rumbo', Math.round(p && p.pos ? p.pos.heading : f.heading) + '°'],
+          ['Restante', t >= 1 ? '—' : remaining + ' min'],
+        ])
+      );
+
+      var meter = document.createElement('div');
+      meter.className = 'meter';
+      var bar = document.createElement('i');
+      bar.style.width = (t * 100).toFixed(1) + '%';
+      meter.appendChild(bar);
+      s.appendChild(meter);
+
+      host.appendChild(s);
+
+      var note = section('Cómo se calcula');
+      var text = document.createElement('p');
+      text.className = 'note';
+      text.innerHTML =
+        'El servidor <b>no guarda la posición</b> de este avión. Guarda su plan ' +
+        '—origen, destino, hora de salida y hora de llegada— y esta página ' +
+        'interpola sobre el arco de círculo máximo contra el reloj. Por eso el ' +
+        'símbolo se mueve sin pedir nada, y todos los jugadores lo ven en el ' +
+        'mismo sitio.';
+      note.appendChild(text);
+      host.appendChild(note);
+    }
+
+    function altitudeAt(t, distanceKm) {
+      var cruise = distanceKm < 500 ? 7500 : distanceKm < 1500 ? 10000 : 11600;
+      if (t <= 0.08) return cruise * (t / 0.08);
+      if (t >= 0.88) return cruise * ((1 - t) / 0.12);
+      return cruise;
+    }
+
+    function renderAirportPanel(host) {
+      var a = DATA.airports.filter(function (x) { return x.iata === selected.id; })[0];
+      if (!a) return renderHelpPanel(host);
+
+      var inbound = DATA.flights.filter(function (f) { return f.destination === a.iata; });
+      var outbound = DATA.flights.filter(function (f) { return f.origin === a.iata; });
+
+      var s = section('Aeropuerto');
+
+      var head = document.createElement('div');
+      head.style.display = 'flex';
+      head.style.alignItems = 'baseline';
+      head.style.gap = '10px';
+      head.style.marginBottom = '10px';
+
+      var code = document.createElement('div');
+      code.className = 'code';
+      code.style.fontFamily = 'var(--mono)';
+      code.style.fontSize = '26px';
+      code.style.fontWeight = '600';
+      code.textContent = a.iata;
+
+      var city = document.createElement('div');
+      city.className = 'city';
+      city.textContent = a.city + ' · ' + a.country;
+
+      head.appendChild(code);
+      head.appendChild(city);
+      s.appendChild(head);
+
+      var full = document.createElement('div');
+      full.className = 'note';
+      full.style.marginBottom = '12px';
+      full.textContent = a.name;
+      s.appendChild(full);
+
+      s.appendChild(
+        dl([
+          ['Clase', 'Nivel ' + a.size + ' de 5'],
+          ['Peso de mercado', nf.format(Math.round(a.weight))],
+          ['Rutas de salida', String(a.departures)],
+          ['En aproximación', String(inbound.length)],
+          ['Despegados', String(outbound.length)],
+        ])
+      );
+
+      var meter = document.createElement('div');
+      meter.className = 'meter calm';
+      var bar = document.createElement('i');
+      bar.style.width = (a.size / 5) * 100 + '%';
+      meter.appendChild(bar);
+      s.appendChild(meter);
+
+      host.appendChild(s);
+
+      var note = section('Sobre el peso de mercado');
+      var text = document.createElement('p');
+      text.className = 'note';
+      text.innerHTML =
+        'El peso de mercado alimenta el modelo de gravedad que genera la demanda. ' +
+        'Hoy se deriva de datos observables del aeropuerto —categoría, pistas y ' +
+        'longitud— y es <b>provisional</b>: sustituirlo por tráfico real de ' +
+        'pasajeros es la primera tarea de calibración pendiente.';
+      note.appendChild(text);
+      host.appendChild(note);
+    }
+
+    function renderHelpPanel(host) {
+      var s = section('Sin selección');
+      var text = document.createElement('p');
+      text.className = 'note';
+      text.textContent =
+        'Toca un avión para ver su vuelo, o un aeropuerto para ver su mercado. ' +
+        'Rueda del ratón o pellizco para acercar.';
+      s.appendChild(text);
+      host.appendChild(s);
+    }
+
+    /* ─── Arranque ──────────────────────────────────────────────────── */
+
+    var currentCarrier = DATA.airlines.length > 0 ? DATA.airlines[0].name : '';
+
+    svg.addEventListener('click', function () {
+      if (drag !== null && drag.moved) return;
+    });
+
+    function tickClock() {
+      var d = new Date();
+      document.getElementById('clock').textContent =
+        String(d.getUTCHours()).padStart(2, '0') +
+        ':' +
+        String(d.getUTCMinutes()).padStart(2, '0') +
+        ':' +
+        String(d.getUTCSeconds()).padStart(2, '0');
+    }
+
+    renderTopbar();
+    renderCarrier(currentCarrier);
+    highlightNetwork(currentCarrier);
+    renderBoard();
+    renderStrip();
+    renderInspector();
+    applyCam();
+    tickClock();
+
+    window.addEventListener('resize', function () {
+      clampCam();
+      applyCam();
+    });
+
+    setInterval(tickClock, 1000);
+
+    // Los aviones se mueven de verdad: la posición se recalcula contra el
+    // reloj, no se anima por animar.
+    setInterval(function () {
+      render();
+      renderStrip();
+      if (selected.kind === 'flight') renderInspector();
+    }, 1000);
+  })();
+</script>

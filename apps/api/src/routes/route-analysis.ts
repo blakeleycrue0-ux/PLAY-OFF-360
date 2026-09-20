@@ -15,6 +15,7 @@ import {
   type AircraftType,
   type Airport,
   type DemandBreakdown,
+  type FlightOption,
   type PaxByCabin,
   type RouteProfitForecast,
   type RoutePrices,
@@ -80,36 +81,7 @@ export function registerRouteAnalysisRoutes(app: FastifyInstance, ctx: ApiContex
       addDays(dayStart, 1),
     );
 
-    // La oferta hipotética del jugador, valorada junto a la competencia real.
-    const cabin = {
-      economy: Math.round(type.typicalSeats * 0.95),
-      business: Math.round(type.typicalSeats * 0.05),
-    };
-    const prices = {
-      economy: mulMoney(
-        calculateReferenceFare(distanceKm, 'economy', ctx.config),
-        query.priceFactor,
-      ),
-      business: mulMoney(
-        calculateReferenceFare(distanceKm, 'business', ctx.config),
-        query.priceFactor,
-      ),
-    };
-
-    const candidate = {
-      key: 'candidate',
-      airlineId: 'candidate' as never,
-      prices,
-      seats: cabin,
-      departureMinuteUtc: minutes(query.departureHourUtc * 60),
-      originUtcOffsetMinutes: origin.utcOffsetMinutes,
-      weeklyFrequency: query.weeklyFrequency,
-      reputation: 50,
-      onTimeRate: 85,
-      productScore: cabinQualityScore(cabin, type.maxSeats, query.serviceLevel),
-      loyalty: 0,
-      stops: 0,
-    };
+    const { cabin, prices, candidate } = buildCandidateOffer(ctx, query, type, origin, distanceKm);
 
     const allocation = allocateDemand(
       [candidate, ...competitors.map(toFlightOption)],
@@ -155,6 +127,50 @@ export function registerRouteAnalysisRoutes(app: FastifyInstance, ctx: ApiContex
       referenceFare: calculateReferenceFare(distanceKm, 'economy', ctx.config),
     });
   });
+}
+
+/**
+ * La oferta hipotética que el jugador está evaluando, lista para entrar en el
+ * modelo de elección junto a la competencia real.
+ */
+function buildCandidateOffer(
+  ctx: ApiContext,
+  query: z.infer<typeof querySchema>,
+  type: AircraftType,
+  origin: Airport,
+  distanceKm: number,
+): { cabin: SeatsByCabin; prices: RoutePrices; candidate: FlightOption } {
+  const cabin = {
+    economy: Math.round(type.typicalSeats * 0.95),
+    business: Math.round(type.typicalSeats * 0.05),
+  };
+
+  const prices = {
+    economy: mulMoney(calculateReferenceFare(distanceKm, 'economy', ctx.config), query.priceFactor),
+    business: mulMoney(
+      calculateReferenceFare(distanceKm, 'business', ctx.config),
+      query.priceFactor,
+    ),
+  };
+
+  return {
+    cabin,
+    prices,
+    candidate: {
+      key: 'candidate',
+      airlineId: 'candidate' as FlightOption['airlineId'],
+      prices,
+      seats: cabin,
+      departureMinuteUtc: minutes(query.departureHourUtc * 60),
+      originUtcOffsetMinutes: origin.utcOffsetMinutes,
+      weeklyFrequency: query.weeklyFrequency,
+      reputation: 50,
+      onTimeRate: 85,
+      productScore: cabinQualityScore(cabin, type.maxSeats, query.serviceLevel),
+      loyalty: 0,
+      stops: 0,
+    },
+  };
 }
 
 type AnalysisTargets =

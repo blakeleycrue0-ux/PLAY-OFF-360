@@ -28,7 +28,11 @@
     "simulation:run": "tsx packages/simulation/src/cli/run.ts",
     "api:dev": "tsx watch apps/api/src/main.ts",
     "worker:dev": "tsx watch apps/worker/src/main.ts",
-    "verify": "pnpm typecheck && pnpm lint && pnpm test"
+    "verify": "pnpm typecheck && pnpm lint && pnpm test",
+    "data:build-map": "tsx scripts/build-map-geometry.ts",
+    "ui:snapshot": "tsx scripts/export-ui-snapshot.ts",
+    "ui:preview": "tsx scripts/build-preview.ts",
+    "ui:build": "pnpm ui:snapshot && pnpm ui:preview"
   },
   "devDependencies": {
     "@airline/config": "workspace:*",
@@ -37,15 +41,23 @@
     "@airline/shared": "workspace:*",
     "@airline/simulation": "workspace:*",
     "@eslint/js": "^9.17.0",
+    "@types/d3-geo": "^3.1.1",
+    "@types/geojson": "^7946.0.16",
     "@types/node": "^22.10.2",
+    "@types/topojson-client": "^3.1.5",
+    "@types/topojson-specification": "^1.0.5",
+    "d3-geo": "^3.1.1",
     "eslint": "^9.17.0",
     "eslint-config-prettier": "^9.1.0",
     "eslint-import-resolver-typescript": "^3.7.0",
     "eslint-plugin-import-x": "^4.6.1",
+    "playwright": "^1.63.0",
     "prettier": "^3.4.2",
+    "topojson-client": "^3.1.0",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2",
     "typescript-eslint": "^8.18.1",
-    "vitest": "^3.2.7"
+    "vitest": "^3.2.7",
+    "world-atlas": "^2.0.2"
   }
 }

@@ -61,7 +61,9 @@ export function addMinutes(t: Instant, m: Minutes): Instant {
 }
 
 export function addDays(t: Instant, days: number): Instant {
-  return instant(t + days * MS_PER_DAY);
+  // Se redondea porque `days` admite fracciones (media jornada, un cuarto de
+  // día) y un instante es siempre un entero de milisegundos.
+  return instant(t + Math.round(days * MS_PER_DAY));
 }
 
 export function diffMinutes(from: Instant, to: Instant): Minutes {

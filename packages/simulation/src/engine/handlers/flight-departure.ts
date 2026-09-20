@@ -115,24 +115,7 @@ export async function handleFlightDeparture(
   const loadFactor = seats > 0 ? paxTotal / seats : 0;
 
   const fuelKg = calculateFuelBurnKg(blockMinutes, type, loadFactor, ctx.config);
-  const fuelCost = calculateFuelCost(fuelKg, world.fuelPriceCentsPerKg);
-
-  // El combustible se paga al despegar: es cuando se consume. El resto de
-  // costes y los ingresos se liquidan al aterrizar.
-  await postLedgerEntries(tx, [
-    {
-      worldId: flight.worldId,
-      airlineId: flight.airlineId,
-      occurredAt: actualDeparture,
-      category: 'fuel',
-      amount: negateMoney(fuelCost),
-      idempotencyKey: idempotencyKey.flightCost(flight.id, 'fuel'),
-      flightId: flight.id,
-      aircraftId: flight.aircraftId,
-      routeId: flight.routeId,
-      description: `Combustible ${flight.flightNumber} ${flight.origin}-${flight.destination}`,
-    },
-  ]);
+  await chargeFuel(tx, flight, world.fuelPriceCentsPerKg, fuelKg, actualDeparture);
 
   await flightsRepo.markFlightDeparted(tx, flight.id, {
     actualDeparture,
@@ -250,6 +233,35 @@ async function cancelForBlocker(
     },
   });
   return { kind: 'cancelled', reason: blocker.message };
+}
+
+/**
+ * Asienta el combustible del vuelo.
+ *
+ * Se paga al despegar porque es cuando se consume. El resto de costes y los
+ * ingresos se liquidan al aterrizar, en un solo asiento atómico.
+ */
+async function chargeFuel(
+  tx: PoolClient,
+  flight: Flight,
+  fuelPriceCentsPerKg: number,
+  fuelKg: number,
+  occurredAt: Instant,
+): Promise<void> {
+  await postLedgerEntries(tx, [
+    {
+      worldId: flight.worldId,
+      airlineId: flight.airlineId,
+      occurredAt,
+      category: 'fuel',
+      amount: negateMoney(calculateFuelCost(fuelKg, fuelPriceCentsPerKg)),
+      idempotencyKey: idempotencyKey.flightCost(flight.id, 'fuel'),
+      flightId: flight.id,
+      aircraftId: flight.aircraftId,
+      routeId: flight.routeId,
+      description: `Combustible ${flight.flightNumber} ${flight.origin}-${flight.destination}`,
+    },
+  ]);
 }
 
 interface ActualPlanInput {

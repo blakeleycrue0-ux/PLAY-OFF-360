@@ -59,3 +59,18 @@ describe('ManualClock', () => {
     }).toThrow(/no puede retroceder/);
   });
 });
+
+describe('aritmética con días fraccionarios', () => {
+  it('admite fracciones de día sin romper el instante', () => {
+    // Medio día, un cuarto, y una fracción cualquiera: todas deben producir
+    // milisegundos enteros.
+    expect(toISO(addDays(T, 0.5))).toBe('2026-07-16T06:20:00.000Z');
+    expect(toISO(addDays(T, 0.25))).toBe('2026-07-16T00:20:00.000Z');
+    expect(() => addDays(T, 0.840552)).not.toThrow();
+    expect(Number.isSafeInteger(addDays(T, 0.840552))).toBe(true);
+  });
+
+  it('admite retroceder en el tiempo', () => {
+    expect(toISO(addDays(T, -1.5))).toBe('2026-07-14T06:20:00.000Z');
+  });
+});

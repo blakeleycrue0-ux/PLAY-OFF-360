@@ -9,3 +9,7 @@ coverage/
 # Datos de origen descargados (grandes, regenerables con pnpm data:fetch-airports).
 # El snapshot normalizado en data/*.json SÍ se versiona: ver ADR-011.
 data/source/
+
+# Instantánea de datos para la vista previa: se regenera con
+# `pnpm ui:snapshot` a partir de la última simulación.
+data/ui-snapshot.json

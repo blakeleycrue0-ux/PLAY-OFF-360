@@ -1,0 +1,1725 @@
+<title>Airline World</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link
+  rel="stylesheet"
+  href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@400;500;600&family=Barlow:wght@400;500&family=IBM+Plex+Mono:wght@400;500;600&display=swap"
+/>
+
+<style>
+  /*
+   * Consola de operaciones de una aerolínea.
+   *
+   * El diseño se compromete con un único mundo visual: una sala de control de
+   * noche. Fondo casi negro, tierra apenas insinuada, y un solo acento ámbar
+   * reservado a lo que está vivo —los aviones en el aire—. Todo lo demás es
+   * gris frío para que el ámbar signifique algo.
+   */
+  :root {
+    --void: #08090b;
+    --panel: #0e1116;
+    --panel-raised: #12161c;
+    --land: #161a21;
+    --land-edge: #232932;
+    --hairline: #1e242d;
+    --hairline-strong: #2b323d;
+
+    --ink: #e7e9ec;
+    --ink-dim: #8a93a2;
+    --ink-faint: #59616f;
+
+    --signal: #e8b23a;
+    --signal-dim: #8a6b24;
+    --gain: #4fae84;
+    --loss: #d4614f;
+    --route: #222c3a;
+
+    --mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+    --ui: 'Barlow Semi Condensed', 'Barlow', system-ui, sans-serif;
+    --body: 'Barlow', system-ui, sans-serif;
+
+    color-scheme: dark;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  html,
+  body {
+    height: 100%;
+  }
+
+  body {
+    margin: 0;
+    background: var(--void);
+    color: var(--ink);
+    font-family: var(--body);
+    font-size: 14px;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .shell {
+    display: grid;
+    grid-template-rows: auto 1fr;
+    height: 100%;
+    min-height: 100%;
+  }
+
+  /* ─── Barra superior ─────────────────────────────────────────────── */
+
+  .topbar {
+    display: flex;
+    align-items: center;
+    gap: 22px;
+    padding: 0 16px;
+    height: 52px;
+    border-bottom: 1px solid var(--hairline);
+    background: var(--panel);
+    flex-wrap: wrap;
+  }
+
+  .brand {
+    display: flex;
+    align-items: baseline;
+    gap: 9px;
+    margin-right: auto;
+  }
+
+  .brand b {
+    font-family: var(--ui);
+    font-weight: 600;
+    font-size: 16px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+
+  .brand span {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--ink-faint);
+    letter-spacing: 0.06em;
+  }
+
+  .stat {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 62px;
+  }
+
+  .stat .k {
+    font-family: var(--ui);
+    font-size: 10px;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+
+  .stat .v {
+    font-family: var(--mono);
+    font-size: 15px;
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .stat .v.live {
+    color: var(--signal);
+  }
+
+  .clock {
+    font-family: var(--mono);
+    font-size: 15px;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.04em;
+  }
+
+  .clock::after {
+    content: ' UTC';
+    font-size: 10px;
+    color: var(--ink-faint);
+    letter-spacing: 0.1em;
+  }
+
+  /* ─── Rejilla principal ──────────────────────────────────────────── */
+
+  .main {
+    display: grid;
+    grid-template-columns: 236px 1fr 296px;
+    min-height: 0;
+  }
+
+  .rail,
+  .inspector {
+    border-color: var(--hairline);
+    background: var(--panel);
+    overflow-y: auto;
+    min-height: 0;
+  }
+
+  .rail {
+    border-right: 1px solid var(--hairline);
+  }
+
+  .inspector {
+    border-left: 1px solid var(--hairline);
+  }
+
+  .section {
+    border-bottom: 1px solid var(--hairline);
+    padding: 14px 14px 16px;
+  }
+
+  .section h2 {
+    margin: 0 0 12px;
+    font-family: var(--ui);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+
+  /* ─── Identidad de la aerolínea ──────────────────────────────────── */
+
+  .carrier {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+
+  .tail {
+    width: 38px;
+    height: 38px;
+    flex: none;
+    border-radius: 3px;
+    display: grid;
+    place-items: center;
+    font-family: var(--ui);
+    font-weight: 600;
+    font-size: 13px;
+    letter-spacing: 0.06em;
+    color: var(--void);
+    background: var(--signal);
+  }
+
+  .carrier-name {
+    font-family: var(--ui);
+    font-size: 15px;
+    font-weight: 500;
+    line-height: 1.15;
+  }
+
+  .carrier-sub {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    color: var(--ink-faint);
+    letter-spacing: 0.05em;
+    margin-top: 2px;
+  }
+
+  .kpis {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1px;
+    background: var(--hairline);
+    border: 1px solid var(--hairline);
+    margin-top: 14px;
+  }
+
+  .kpi {
+    background: var(--panel);
+    padding: 9px 10px;
+  }
+
+  .kpi .k {
+    font-family: var(--ui);
+    font-size: 9.5px;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+
+  .kpi .v {
+    font-family: var(--mono);
+    font-size: 16px;
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+    margin-top: 2px;
+  }
+
+  .kpi .v small {
+    font-size: 10px;
+    color: var(--ink-faint);
+    margin-left: 2px;
+  }
+
+  .gain {
+    color: var(--gain);
+  }
+
+  .loss {
+    color: var(--loss);
+  }
+
+  /* ─── Tabla de clasificación ─────────────────────────────────────── */
+
+  .board {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: var(--mono);
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .board th {
+    font-family: var(--ui);
+    font-size: 9.5px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    text-align: right;
+    padding: 0 0 7px;
+  }
+
+  .board {
+    table-layout: fixed;
+  }
+
+  .board th:first-child,
+  .board td:first-child {
+    text-align: left;
+    /* Una fila por compañía: un nombre largo se recorta, no parte la tabla. */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .board th:nth-child(2),
+  .board td:nth-child(2) {
+    width: 42px;
+  }
+
+  .board th:nth-child(3),
+  .board td:nth-child(3) {
+    width: 58px;
+  }
+
+  .board td {
+    padding: 5px 0;
+    text-align: right;
+    border-top: 1px solid var(--hairline);
+    color: var(--ink-dim);
+  }
+
+  .board tbody tr {
+    cursor: pointer;
+  }
+
+  .board tbody tr:hover td {
+    color: var(--ink);
+    background: var(--panel-raised);
+  }
+
+  .board tr.on td {
+    color: var(--ink);
+  }
+
+  .board tr.on td:first-child {
+    box-shadow: inset 2px 0 0 var(--signal);
+  }
+
+  .board .hub {
+    color: var(--ink-faint);
+    padding-left: 6px;
+  }
+
+  /* ─── Mapa ───────────────────────────────────────────────────────── */
+
+  .stage {
+    position: relative;
+    min-height: 0;
+    background: var(--void);
+    overflow: hidden;
+  }
+
+  #map {
+    display: block;
+    width: 100%;
+    height: 100%;
+    cursor: grab;
+    touch-action: none;
+  }
+
+  #map.dragging {
+    cursor: grabbing;
+  }
+
+  .land {
+    fill: var(--land);
+    stroke: none;
+  }
+
+  .border {
+    fill: none;
+    stroke: var(--land-edge);
+    stroke-width: 0.7;
+    vector-effect: non-scaling-stroke;
+  }
+
+  /*
+   * 800 rutas dibujadas con el mismo peso son ruido, no información. La red
+   * entera queda como textura de fondo y sólo se levanta la de la compañía
+   * que se está mirando.
+   */
+  .route {
+    fill: none;
+    stroke: var(--route);
+    stroke-width: 0.6;
+    opacity: 0.5;
+    vector-effect: non-scaling-stroke;
+  }
+
+  .route.mine {
+    stroke: var(--ink-faint);
+    opacity: 0.9;
+  }
+
+  .apt {
+    fill: var(--ink-faint);
+  }
+
+  .apt.major {
+    fill: var(--ink-dim);
+  }
+
+  .apt-hit {
+    fill: transparent;
+    cursor: pointer;
+  }
+
+  .apt-label {
+    font-family: var(--mono);
+    font-size: 9px;
+    font-weight: 500;
+    fill: var(--ink-dim);
+    letter-spacing: 0.04em;
+    pointer-events: none;
+  }
+
+  .track {
+    fill: none;
+    stroke: var(--signal-dim);
+    stroke-width: 1;
+    stroke-dasharray: 3 4;
+    vector-effect: non-scaling-stroke;
+  }
+
+  .plane {
+    fill: var(--signal);
+    cursor: pointer;
+  }
+
+  .plane-ring {
+    fill: none;
+    stroke: var(--signal);
+    stroke-width: 1;
+    vector-effect: non-scaling-stroke;
+    opacity: 0.55;
+  }
+
+  .plane-tag {
+    font-family: var(--mono);
+    font-size: 9.5px;
+    font-weight: 500;
+    fill: var(--signal);
+    letter-spacing: 0.04em;
+    pointer-events: none;
+  }
+
+  /* ─── Controles flotantes sobre el mapa ──────────────────────────── */
+
+  .overlay {
+    position: absolute;
+    display: flex;
+    gap: 6px;
+    z-index: 2;
+  }
+
+  .overlay.tl {
+    top: 12px;
+    left: 12px;
+  }
+
+  .overlay.bl {
+    bottom: 12px;
+    left: 12px;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .overlay.br {
+    bottom: 12px;
+    right: 12px;
+    flex-direction: column;
+  }
+
+  .chip {
+    font-family: var(--ui);
+    font-size: 10.5px;
+    font-weight: 500;
+    letter-spacing: 0.11em;
+    text-transform: uppercase;
+    color: var(--ink-dim);
+    background: color-mix(in srgb, var(--panel) 88%, transparent);
+    border: 1px solid var(--hairline-strong);
+    padding: 6px 10px;
+    cursor: pointer;
+    border-radius: 2px;
+  }
+
+  .chip:hover {
+    color: var(--ink);
+    border-color: var(--ink-faint);
+  }
+
+  .chip[aria-pressed='true'] {
+    color: var(--void);
+    background: var(--ink-dim);
+    border-color: var(--ink-dim);
+  }
+
+  .chip.square {
+    width: 30px;
+    padding: 6px 0;
+    text-align: center;
+    font-family: var(--mono);
+    font-size: 14px;
+    letter-spacing: 0;
+  }
+
+  .scalebar {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--ink-faint);
+    background: color-mix(in srgb, var(--panel) 88%, transparent);
+    border: 1px solid var(--hairline);
+    padding: 4px 8px;
+    letter-spacing: 0.05em;
+  }
+
+  /* ─── Tira de vuelos en el aire ──────────────────────────────────── */
+
+  .strip {
+    background: color-mix(in srgb, var(--panel) 94%, transparent);
+    border: 1px solid var(--hairline-strong);
+    max-height: 178px;
+    overflow-y: auto;
+    min-width: 268px;
+  }
+
+  .strip h3 {
+    margin: 0;
+    padding: 8px 11px 7px;
+    font-family: var(--ui);
+    font-size: 9.5px;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    border-bottom: 1px solid var(--hairline);
+    position: sticky;
+    top: 0;
+    background: var(--panel);
+  }
+
+  .strip-row {
+    display: grid;
+    grid-template-columns: 62px 1fr auto;
+    gap: 9px;
+    align-items: center;
+    padding: 6px 11px;
+    border-bottom: 1px solid var(--hairline);
+    cursor: pointer;
+    font-family: var(--mono);
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+    color: var(--ink-dim);
+  }
+
+  .strip-row:last-child {
+    border-bottom: 0;
+  }
+
+  .strip-row:hover,
+  .strip-row.on {
+    background: var(--panel-raised);
+    color: var(--ink);
+  }
+
+  .strip-row.on {
+    box-shadow: inset 2px 0 0 var(--signal);
+  }
+
+  .strip-row .cs {
+    color: var(--signal);
+    font-weight: 500;
+  }
+
+  .strip-row .pr {
+    color: var(--ink-faint);
+    font-size: 10px;
+  }
+
+  /* ─── Inspector ──────────────────────────────────────────────────── */
+
+  .leg {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 10px;
+    margin: 4px 0 12px;
+  }
+
+  .leg .code {
+    font-family: var(--mono);
+    font-size: 26px;
+    font-weight: 500;
+    letter-spacing: 0.01em;
+  }
+
+  .leg .wire {
+    height: 1px;
+    background: linear-gradient(to right, var(--hairline-strong), var(--signal-dim));
+    position: relative;
+  }
+
+  .leg .wire i {
+    position: absolute;
+    top: -3px;
+    width: 7px;
+    height: 7px;
+    background: var(--signal);
+    transform: translateX(-50%) rotate(45deg);
+  }
+
+  .leg .city {
+    font-family: var(--ui);
+    font-size: 10.5px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin-top: 1px;
+  }
+
+  .rows {
+    display: grid;
+    gap: 1px;
+    background: var(--hairline);
+    border-top: 1px solid var(--hairline);
+    border-bottom: 1px solid var(--hairline);
+  }
+
+  .row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 12px;
+    background: var(--panel);
+    padding: 7px 0;
+  }
+
+  .row dt {
+    font-family: var(--ui);
+    font-size: 10.5px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+
+  .row dd {
+    margin: 0;
+    font-family: var(--mono);
+    font-size: 12.5px;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+  }
+
+  .meter {
+    height: 3px;
+    background: var(--hairline);
+    margin-top: 9px;
+    overflow: hidden;
+  }
+
+  .meter i {
+    display: block;
+    height: 100%;
+    background: var(--signal);
+  }
+
+  .meter.calm i {
+    background: var(--ink-dim);
+  }
+
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-family: var(--ui);
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--signal);
+    border: 1px solid var(--signal-dim);
+    padding: 2px 7px;
+    border-radius: 2px;
+  }
+
+  .pill::before {
+    content: '';
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--signal);
+    animation: pulse 2.4s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.25;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .pill::before {
+      animation: none;
+    }
+  }
+
+  .note {
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--ink-faint);
+  }
+
+  .note b {
+    color: var(--ink-dim);
+    font-weight: 500;
+  }
+
+  .legend {
+    display: grid;
+    gap: 6px;
+    font-family: var(--mono);
+    font-size: 10.5px;
+    color: var(--ink-faint);
+  }
+
+  .legend div {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .legend i {
+    width: 10px;
+    height: 10px;
+    flex: none;
+    display: inline-block;
+  }
+
+  /* ─── Adaptación a pantallas estrechas ───────────────────────────── */
+
+  @media (max-width: 1100px) {
+    .main {
+      grid-template-columns: 210px 1fr;
+    }
+
+    .inspector {
+      grid-column: 1 / -1;
+      border-left: 0;
+      border-top: 1px solid var(--hairline);
+    }
+  }
+
+  @media (max-width: 760px) {
+    .shell {
+      height: auto;
+      min-height: 100%;
+    }
+
+    .main {
+      grid-template-columns: 1fr;
+    }
+
+    .stage {
+      height: 62vh;
+      min-height: 340px;
+      border-bottom: 1px solid var(--hairline);
+    }
+
+    .rail {
+      border-right: 0;
+      border-bottom: 1px solid var(--hairline);
+      order: 2;
+    }
+
+    .inspector {
+      order: 3;
+    }
+
+    .topbar {
+      height: auto;
+      padding-block: 10px;
+      gap: 16px;
+    }
+
+    .overlay.bl .strip {
+      max-height: 128px;
+      min-width: 232px;
+    }
+  }
+</style>
+
+<div class="shell">
+  <header class="topbar">
+    <div class="brand">
+      <b>Airline&nbsp;World</b>
+      <span id="world-name"></span>
+    </div>
+    <div class="stat">
+      <span class="k">En el aire</span><span class="v live" id="t-air">0</span>
+    </div>
+    <div class="stat"><span class="k">Vuelos hoy</span><span class="v" id="t-flights">0</span></div>
+    <div class="stat"><span class="k">Pasajeros</span><span class="v" id="t-pax">0</span></div>
+    <div class="stat"><span class="k">Ocupación</span><span class="v" id="t-lf">0%</span></div>
+    <div class="stat"><span class="k">Puntualidad</span><span class="v" id="t-otp">0%</span></div>
+    <div class="stat"><span class="k">Queroseno</span><span class="v" id="t-fuel">0</span></div>
+    <div class="clock" id="clock">--:--:--</div>
+  </header>
+
+  <div class="main">
+    <aside class="rail">
+      <div class="section">
+        <h2>Compañía</h2>
+        <div class="carrier">
+          <div class="tail" id="c-tail">--</div>
+          <div>
+            <div class="carrier-name" id="c-name">—</div>
+            <div class="carrier-sub" id="c-sub">—</div>
+          </div>
+        </div>
+        <div class="kpis">
+          <div class="kpi"><div class="k">Flota</div><div class="v" id="c-fleet">0</div></div>
+          <div class="kpi"><div class="k">Rutas</div><div class="v" id="c-routes">0</div></div>
+          <div class="kpi"><div class="k">Ocupación</div><div class="v" id="c-lf">0<small>%</small></div></div>
+          <div class="kpi"><div class="k">Puntualidad</div><div class="v" id="c-otp">0<small>%</small></div></div>
+          <div class="kpi"><div class="k">Pasajeros</div><div class="v" id="c-pax">0</div></div>
+          <div class="kpi"><div class="k">Resultado</div><div class="v" id="c-result">0</div></div>
+        </div>
+      </div>
+
+      <div class="section">
+        <h2>Clasificación por resultado</h2>
+        <table class="board">
+          <thead>
+            <tr>
+              <th>Compañía</th>
+              <th>Ocup.</th>
+              <th>Result.</th>
+            </tr>
+          </thead>
+          <tbody id="board"></tbody>
+        </table>
+      </div>
+
+      <div class="section">
+        <h2>Leyenda</h2>
+        <div class="legend">
+          <div><i style="background: var(--signal)"></i> Avión en vuelo</div>
+          <div><i style="background: var(--ink-dim); border-radius: 50%"></i> Aeropuerto</div>
+          <div><i style="background: var(--ink-faint)"></i> Red de la compañía</div>
+          <div><i style="background: var(--route)"></i> Resto del mundo</div>
+        </div>
+      </div>
+    </aside>
+
+    <section class="stage">
+      <div class="overlay tl">
+        <button class="chip" id="l-routes" aria-pressed="true" type="button">Rutas</button>
+        <button class="chip" id="l-labels" aria-pressed="true" type="button">Códigos</button>
+        <button class="chip" id="l-tracks" aria-pressed="true" type="button">Trayectos</button>
+      </div>
+
+      <div class="overlay br">
+        <button class="chip square" id="z-in" type="button" aria-label="Acercar">+</button>
+        <button class="chip square" id="z-out" type="button" aria-label="Alejar">−</button>
+        <button class="chip square" id="z-reset" type="button" aria-label="Encuadre inicial">⤾</button>
+      </div>
+
+      <div class="overlay bl">
+        <div class="strip">
+          <h3>En el aire ahora</h3>
+          <div id="strip"></div>
+        </div>
+        <div class="scalebar" id="scalebar">—</div>
+      </div>
+
+      <svg id="map" role="img" aria-label="Mapa de operaciones en Europa"></svg>
+    </section>
+
+    <aside class="inspector" id="inspector"></aside>
+  </div>
+</div>
+
+<script id="snapshot" type="application/json">
+  __SNAPSHOT__
+</script>
+
+<script>
+  (function () {
+    'use strict';
+
+    var DATA = JSON.parse(document.getElementById('snapshot').textContent);
+    var VIEW = DATA.map.view;
+    var PROJ = DATA.projection;
+
+    /* ─── Proyección ────────────────────────────────────────────────
+     * Los mismos parámetros con los que se dibujó el mapa, que viajan con
+     * los datos. Vive en el cliente porque el cliente necesita situar
+     * puntos que se mueven: un avión no se pide al servidor cada segundo,
+     * se calcula.
+     */
+    function mercY(lat) {
+      return Math.log(Math.tan(Math.PI / 4 + (lat * Math.PI) / 360));
+    }
+
+    function project(lon, lat) {
+      return {
+        x: PROJ.translateX + PROJ.scale * lon * (Math.PI / 180),
+        y: PROJ.translateY - PROJ.scale * mercY(lat),
+      };
+    }
+
+    /* ─── Posición de un avión ──────────────────────────────────────
+     * Interpolación esférica sobre el arco de círculo máximo, idéntica a
+     * la del dominio. Es la pieza que permite que el servidor no guarde
+     * ni difunda posiciones: todos los clientes calculan lo mismo.
+     */
+    var RAD = Math.PI / 180;
+    var DEG = 180 / Math.PI;
+
+    function slerp(lat1, lon1, lat2, lon2, f) {
+      var p1 = lat1 * RAD;
+      var l1 = lon1 * RAD;
+      var p2 = lat2 * RAD;
+      var l2 = lon2 * RAD;
+
+      var d =
+        2 *
+        Math.asin(
+          Math.min(
+            1,
+            Math.sqrt(
+              Math.pow(Math.sin((p2 - p1) / 2), 2) +
+                Math.cos(p1) * Math.cos(p2) * Math.pow(Math.sin((l2 - l1) / 2), 2)
+            )
+          )
+        );
+
+      if (d < 1e-9) return { lat: lat1, lon: lon1 };
+
+      var a = Math.sin((1 - f) * d) / Math.sin(d);
+      var b = Math.sin(f * d) / Math.sin(d);
+      var x = a * Math.cos(p1) * Math.cos(l1) + b * Math.cos(p2) * Math.cos(l2);
+      var y = a * Math.cos(p1) * Math.sin(l1) + b * Math.cos(p2) * Math.sin(l2);
+      var z = a * Math.sin(p1) + b * Math.sin(p2);
+
+      return { lat: Math.atan2(z, Math.hypot(x, y)) * DEG, lon: Math.atan2(y, x) * DEG };
+    }
+
+    function bearing(lat1, lon1, lat2, lon2) {
+      var p1 = lat1 * RAD;
+      var p2 = lat2 * RAD;
+      var dl = (lon2 - lon1) * RAD;
+      var y = Math.sin(dl) * Math.cos(p2);
+      var x = Math.cos(p1) * Math.sin(p2) - Math.sin(p1) * Math.cos(p2) * Math.cos(dl);
+      return (Math.atan2(y, x) * DEG + 360) % 360;
+    }
+
+    /* ─── Formato ───────────────────────────────────────────────────── */
+
+    var nf = new Intl.NumberFormat('es-ES');
+    var ef = new Intl.NumberFormat('es-ES', {
+      style: 'currency',
+      currency: 'EUR',
+      maximumFractionDigits: 0,
+    });
+
+    function hhmm(iso) {
+      var d = new Date(iso);
+      return (
+        String(d.getUTCHours()).padStart(2, '0') + ':' + String(d.getUTCMinutes()).padStart(2, '0')
+      );
+    }
+
+    function compact(value) {
+      if (Math.abs(value) >= 1e6) return (value / 1e6).toFixed(1).replace('.', ',') + ' M';
+      if (Math.abs(value) >= 1e3) return Math.round(value / 1e3) + ' k';
+      return String(Math.round(value));
+    }
+
+    function el(tag, attrs) {
+      var node = document.createElementNS('http://www.w3.org/2000/svg', tag);
+      for (var key in attrs) node.setAttribute(key, attrs[key]);
+      return node;
+    }
+
+    /* ─── Construcción del mapa ─────────────────────────────────────── */
+
+    var svg = document.getElementById('map');
+    svg.setAttribute('viewBox', '0 0 ' + VIEW.width + ' ' + VIEW.height);
+    svg.setAttribute('preserveAspectRatio', 'xMidYMid slice');
+
+    var gRoot = el('g', {});
+    var gLand = el('g', {});
+    var gRoutes = el('g', {});
+    var gAirports = el('g', {});
+    var gLabels = el('g', {});
+    var gTracks = el('g', {});
+    var gPlanes = el('g', {});
+    gRoot.appendChild(gLand);
+    gRoot.appendChild(gRoutes);
+    gRoot.appendChild(gAirports);
+    gRoot.appendChild(gLabels);
+    gRoot.appendChild(gTracks);
+    gRoot.appendChild(gPlanes);
+    svg.appendChild(gRoot);
+
+    // La tierra es una sola masa rellena; las fronteras van encima, sólo
+    // trazadas. Separarlas evita los agujeros que deja rellenar país a país.
+    gLand.appendChild(el('path', { d: DATA.map.land, class: 'land' }));
+    gLand.appendChild(el('path', { d: DATA.map.borders, class: 'border' }));
+
+    /* Las rutas se dibujan con una ligera comba. Un arco se distingue del
+     * siguiente cuando dos compañías sirven el mismo par, y además insinúa
+     * la trayectoria real, que no es una recta sobre el papel. */
+    var routeNodes = DATA.routes.map(function (r) {
+      var mx = (r.x1 + r.x2) / 2;
+      var my = (r.y1 + r.y2) / 2;
+      var dx = r.x2 - r.x1;
+      var dy = r.y2 - r.y1;
+      var len = Math.hypot(dx, dy) || 1;
+      var bow = Math.min(len * 0.11, 46);
+      var node = el('path', {
+        d:
+          'M' + r.x1 + ',' + r.y1 +
+          ' Q' + (mx - (dy / len) * bow) + ',' + (my + (dx / len) * bow) +
+          ' ' + r.x2 + ',' + r.y2,
+        class: 'route',
+      });
+      gRoutes.appendChild(node);
+      return { airline: r.airline, node: node };
+    });
+
+    function highlightNetwork(name) {
+      routeNodes.forEach(function (r) {
+        r.node.classList.toggle('mine', r.airline === name);
+      });
+    }
+
+    var airportNodes = {};
+
+    DATA.airports.forEach(function (a) {
+      var major = a.size >= 4;
+      var dot = el('circle', {
+        cx: a.x,
+        cy: a.y,
+        r: major ? 2.6 : 1.7,
+        class: 'apt' + (major ? ' major' : ''),
+      });
+      var hit = el('circle', { cx: a.x, cy: a.y, r: 9, class: 'apt-hit' });
+      hit.addEventListener('click', function (e) {
+        e.stopPropagation();
+        selectAirport(a.iata);
+      });
+      gAirports.appendChild(dot);
+      gAirports.appendChild(hit);
+
+      var label = el('text', { x: a.x + 5, y: a.y + 3, class: 'apt-label' });
+      label.textContent = a.iata;
+      label.dataset.size = String(a.size);
+      gLabels.appendChild(label);
+
+      airportNodes[a.iata] = { data: a, dot: dot, label: label };
+    });
+
+    /* ─── Vuelos ────────────────────────────────────────────────────── */
+
+    var planes = DATA.flights.map(function (f) {
+      var group = el('g', { class: 'plane-group' });
+      var ring = el('circle', { r: 7, class: 'plane-ring', opacity: 0 });
+      var body = el('path', { d: 'M0,-5.4 L3.6,4.6 L0,2.6 L-3.6,4.6 Z', class: 'plane' });
+      var tag = el('text', { x: 10, y: 3.5, class: 'plane-tag' });
+      tag.textContent = f.callsign;
+
+      body.addEventListener('click', function (e) {
+        e.stopPropagation();
+        selectFlight(f.id);
+      });
+
+      group.appendChild(ring);
+      group.appendChild(body);
+      group.appendChild(tag);
+      gPlanes.appendChild(group);
+
+      var track = el('path', { class: 'track' });
+      gTracks.appendChild(track);
+
+      return { f: f, group: group, body: body, ring: ring, tag: tag, track: track, pos: null };
+    });
+
+    var planeById = {};
+    planes.forEach(function (p) {
+      planeById[p.f.id] = p;
+    });
+
+    /* ─── Cámara ────────────────────────────────────────────────────── */
+
+    var cam = { k: 1, x: 0, y: 0 };
+
+    function applyCam() {
+      gRoot.setAttribute(
+        'transform',
+        'translate(' + cam.x + ',' + cam.y + ') scale(' + cam.k + ')'
+      );
+
+      // Los símbolos mantienen su tamaño en pantalla al acercar: un punto de
+      // aeropuerto que creciera con el zoom taparía justo lo que se quiere ver.
+      var inv = 1 / cam.k;
+      Object.keys(airportNodes).forEach(function (code) {
+        var node = airportNodes[code];
+        var major = node.data.size >= 4;
+        node.dot.setAttribute('r', String((major ? 2.6 : 1.7) * inv));
+        var visible = labelsOn && node.data.size >= labelThreshold();
+        node.label.style.display = visible ? '' : 'none';
+        node.label.setAttribute('transform', labelTransform(node.data, inv));
+      });
+
+      planes.forEach(function (p) {
+        p.tag.setAttribute('transform', 'scale(' + inv + ')');
+        p.tag.setAttribute('x', String(10));
+        p.tag.setAttribute('y', String(3.5));
+      });
+
+      render();
+      updateScale();
+    }
+
+    /** Latitud que corresponde a una coordenada y del encuadre. */
+    function unprojectLat(y) {
+      return (2 * Math.atan(Math.exp((PROJ.translateY - y) / PROJ.scale)) - Math.PI / 2) * DEG;
+    }
+
+    function labelTransform(a, inv) {
+      return 'translate(' + a.x + ',' + a.y + ') scale(' + inv + ') translate(5,3)';
+    }
+
+    function labelThreshold() {
+      if (cam.k >= 6) return 1;
+      if (cam.k >= 3.2) return 2;
+      if (cam.k >= 1.9) return 3;
+      return 4;
+    }
+
+    function updateScale() {
+      // Un grado de longitud a la latitud del centro del encuadre, en km.
+      var midLat = unprojectLat(VIEW.height / 2);
+      var kmPerDeg = 111.32 * Math.cos(midLat * RAD);
+      var pxPerDeg = PROJ.scale * RAD * cam.k;
+      var target = 140;
+      var km = (target / pxPerDeg) * kmPerDeg;
+      var step = Math.pow(10, Math.floor(Math.log10(km)));
+      var nice = [1, 2, 5, 10].map(function (m) { return m * step; })
+        .reduce(function (best, v) { return Math.abs(v - km) < Math.abs(best - km) ? v : best; });
+      document.getElementById('scalebar').textContent =
+        '◀ ' + nf.format(Math.round(nice)) + ' km ▶   ·   ×' + cam.k.toFixed(1);
+    }
+
+    function clampCam() {
+      var rect = svg.getBoundingClientRect();
+      var scaleToFit = Math.max(rect.width / VIEW.width, rect.height / VIEW.height);
+      var w = VIEW.width * scaleToFit * cam.k;
+      var h = VIEW.height * scaleToFit * cam.k;
+      var maxX = Math.max(0, (w - rect.width) / 2 / scaleToFit);
+      var maxY = Math.max(0, (h - rect.height) / 2 / scaleToFit);
+      cam.x = Math.max(-maxX * cam.k, Math.min(maxX * cam.k, cam.x));
+      cam.y = Math.max(-maxY * cam.k, Math.min(maxY * cam.k, cam.y));
+    }
+
+    function zoomAt(factor, cx, cy) {
+      var next = Math.max(1, Math.min(14, cam.k * factor));
+      var ratio = next / cam.k;
+      cam.x = cx - (cx - cam.x) * ratio;
+      cam.y = cy - (cy - cam.y) * ratio;
+      cam.k = next;
+      clampCam();
+      applyCam();
+    }
+
+    function svgPoint(evt) {
+      var rect = svg.getBoundingClientRect();
+      var scaleToFit = Math.max(rect.width / VIEW.width, rect.height / VIEW.height);
+      return {
+        x: (evt.clientX - rect.left - (rect.width - VIEW.width * scaleToFit) / 2) / scaleToFit,
+        y: (evt.clientY - rect.top - (rect.height - VIEW.height * scaleToFit) / 2) / scaleToFit,
+      };
+    }
+
+    svg.addEventListener(
+      'wheel',
+      function (e) {
+        e.preventDefault();
+        var p = svgPoint(e);
+        zoomAt(e.deltaY < 0 ? 1.18 : 1 / 1.18, p.x, p.y);
+      },
+      { passive: false }
+    );
+
+    var drag = null;
+
+    svg.addEventListener('pointerdown', function (e) {
+      drag = { x: e.clientX, y: e.clientY, cx: cam.x, cy: cam.y, moved: false };
+      svg.setPointerCapture(e.pointerId);
+      svg.classList.add('dragging');
+    });
+
+    svg.addEventListener('pointermove', function (e) {
+      if (drag === null) return;
+      var rect = svg.getBoundingClientRect();
+      var scaleToFit = Math.max(rect.width / VIEW.width, rect.height / VIEW.height);
+      cam.x = drag.cx + (e.clientX - drag.x) / scaleToFit;
+      cam.y = drag.cy + (e.clientY - drag.y) / scaleToFit;
+      if (Math.hypot(e.clientX - drag.x, e.clientY - drag.y) > 3) drag.moved = true;
+      clampCam();
+      applyCam();
+    });
+
+    function endDrag(e) {
+      if (drag !== null) {
+        svg.releasePointerCapture(e.pointerId);
+        svg.classList.remove('dragging');
+      }
+      drag = null;
+    }
+
+    svg.addEventListener('pointerup', endDrag);
+    svg.addEventListener('pointercancel', endDrag);
+
+    document.getElementById('z-in').addEventListener('click', function () {
+      zoomAt(1.45, VIEW.width / 2, VIEW.height / 2);
+    });
+    document.getElementById('z-out').addEventListener('click', function () {
+      zoomAt(1 / 1.45, VIEW.width / 2, VIEW.height / 2);
+    });
+    document.getElementById('z-reset').addEventListener('click', function () {
+      cam = { k: 1, x: 0, y: 0 };
+      applyCam();
+    });
+
+    /* ─── Capas ─────────────────────────────────────────────────────── */
+
+    var routesOn = true;
+    var labelsOn = true;
+    var tracksOn = true;
+
+    function toggle(id, apply) {
+      var btn = document.getElementById(id);
+      btn.addEventListener('click', function () {
+        var next = btn.getAttribute('aria-pressed') !== 'true';
+        btn.setAttribute('aria-pressed', String(next));
+        apply(next);
+      });
+    }
+
+    toggle('l-routes', function (on) {
+      routesOn = on;
+      gRoutes.style.display = on ? '' : 'none';
+    });
+    toggle('l-labels', function (on) {
+      labelsOn = on;
+      applyCam();
+    });
+    toggle('l-tracks', function (on) {
+      tracksOn = on;
+      gTracks.style.display = on ? '' : 'none';
+    });
+
+    /* ─── Selección ─────────────────────────────────────────────────── */
+
+    var selected = { kind: 'flight', id: planes.length > 0 ? planes[0].f.id : null };
+
+    function selectFlight(id) {
+      selected = { kind: 'flight', id: id };
+      renderInspector();
+      renderStrip();
+      render();
+    }
+
+    function selectAirport(iata) {
+      selected = { kind: 'airport', id: iata };
+      renderInspector();
+      renderStrip();
+      render();
+    }
+
+    function selectAirline(name) {
+      selected = { kind: 'airline', id: name };
+      renderCarrier(name);
+      renderBoard();
+      renderInspector();
+    }
+
+    /* ─── Bucle de posiciones ───────────────────────────────────────── */
+
+    function positionOf(f, now) {
+      var dep = Date.parse(f.departure);
+      var arr = Date.parse(f.arrival);
+      var total = arr - dep;
+      var t = total <= 0 ? 1 : Math.max(0, Math.min(1, (now - dep) / total));
+      var here = slerp(f.originLat, f.originLon, f.destLat, f.destLon, t);
+      var pt = project(here.lon, here.lat);
+      var hdg = t >= 1 ? f.heading : bearing(here.lat, here.lon, f.destLat, f.destLon);
+      return { x: pt.x, y: pt.y, t: t, heading: hdg, lat: here.lat, lon: here.lon };
+    }
+
+    function greatCirclePath(f, from, to) {
+      var steps = 24;
+      var d = '';
+      for (var i = 0; i <= steps; i++) {
+        var seg = slerp(f.originLat, f.originLon, f.destLat, f.destLon, from + ((to - from) * i) / steps);
+        var pt = project(seg.lon, seg.lat);
+        d += (i === 0 ? 'M' : 'L') + pt.x.toFixed(1) + ',' + pt.y.toFixed(1);
+      }
+      return d;
+    }
+
+    function render() {
+      var now = Date.now();
+      var inv = 1 / cam.k;
+
+      planes.forEach(function (p) {
+        var pos = positionOf(p.f, now);
+        p.pos = pos;
+        p.group.setAttribute(
+          'transform',
+          'translate(' + pos.x.toFixed(2) + ',' + pos.y.toFixed(2) + ') scale(' + inv + ') rotate(' + pos.heading.toFixed(1) + ')'
+        );
+        // La etiqueta no gira con el avión: un texto cabeza abajo no se lee.
+        p.tag.setAttribute('transform', 'rotate(' + (-pos.heading).toFixed(1) + ')');
+
+        var isOn = selected.kind === 'flight' && selected.id === p.f.id;
+        p.ring.setAttribute('opacity', isOn ? '0.85' : '0');
+        p.tag.style.display = isOn || cam.k >= 2.4 ? '' : 'none';
+        p.track.setAttribute('d', greatCirclePath(p.f, 0, 1));
+        p.track.style.opacity = isOn ? '0.95' : '0.34';
+      });
+
+      Object.keys(airportNodes).forEach(function (code) {
+        var node = airportNodes[code];
+        var isOn = selected.kind === 'airport' && selected.id === code;
+        node.dot.setAttribute('fill', isOn ? 'var(--signal)' : '');
+        node.dot.setAttribute('r', String((node.data.size >= 4 ? 2.6 : 1.7) * (isOn ? 2.1 : 1) * inv));
+      });
+    }
+
+    /* ─── Paneles ───────────────────────────────────────────────────── */
+
+    function renderTopbar() {
+      document.getElementById('world-name').textContent =
+        DATA.world.name + ' · ' + DATA.airports.length + ' aeropuertos';
+      document.getElementById('t-air').textContent = String(DATA.flights.length);
+      document.getElementById('t-flights').textContent = nf.format(DATA.totals.flights);
+      document.getElementById('t-pax').textContent = compact(DATA.totals.pax);
+      document.getElementById('t-lf').textContent =
+        (DATA.totals.loadFactor * 100).toFixed(1).replace('.', ',') + '%';
+      document.getElementById('t-otp').textContent =
+        DATA.totals.onTimePercent.toFixed(1).replace('.', ',') + '%';
+      document.getElementById('t-fuel').textContent =
+        DATA.world.fuelPriceEurPerKg.toFixed(2).replace('.', ',') + ' €';
+    }
+
+    function initials(name) {
+      return name
+        .split(/\s+/)
+        .filter(Boolean)
+        .slice(0, 2)
+        .map(function (w) { return w[0]; })
+        .join('')
+        .toUpperCase();
+    }
+
+    function renderCarrier(name) {
+      var a = DATA.airlines.filter(function (x) { return x.name === name; })[0] || DATA.airlines[0];
+      if (!a) return;
+      document.getElementById('c-tail').textContent = initials(a.name);
+      document.getElementById('c-name').textContent = a.name;
+      document.getElementById('c-sub').textContent =
+        'HUB ' + a.hub + ' · ' + (a.strategy || 'jugador').replace(/_/g, ' ');
+      document.getElementById('c-fleet').textContent = String(a.aircraft);
+      document.getElementById('c-routes').textContent = String(a.routes);
+      document.getElementById('c-lf').innerHTML =
+        a.loadFactor.toFixed(1).replace('.', ',') + '<small>%</small>';
+      document.getElementById('c-otp').innerHTML =
+        a.onTime.toFixed(1).replace('.', ',') + '<small>%</small>';
+      document.getElementById('c-pax').textContent = compact(a.pax);
+      var result = document.getElementById('c-result');
+      result.textContent = (a.resultEur >= 0 ? '+' : '−') + compact(Math.abs(a.resultEur)) + ' €';
+      result.className = 'v ' + (a.resultEur >= 0 ? 'gain' : 'loss');
+    }
+
+    function renderBoard() {
+      var body = document.getElementById('board');
+      body.textContent = '';
+      DATA.airlines.slice(0, 12).forEach(function (a) {
+        var tr = document.createElement('tr');
+        if (selected.kind === 'airline' && selected.id === a.name) tr.className = 'on';
+        if (currentCarrier === a.name) tr.className = 'on';
+
+        var name = document.createElement('td');
+        name.textContent = a.name;
+        var hub = document.createElement('span');
+        hub.className = 'hub';
+        hub.textContent = a.hub;
+        name.appendChild(hub);
+        name.title = a.name + ' · hub ' + a.hub;
+
+        var lf = document.createElement('td');
+        lf.textContent = a.loadFactor.toFixed(0) + '%';
+
+        var res = document.createElement('td');
+        res.textContent = (a.resultEur >= 0 ? '+' : '−') + compact(Math.abs(a.resultEur));
+        res.className = a.resultEur >= 0 ? 'gain' : 'loss';
+
+        tr.appendChild(name);
+        tr.appendChild(lf);
+        tr.appendChild(res);
+        tr.addEventListener('click', function () {
+          currentCarrier = a.name;
+          renderCarrier(a.name);
+          renderBoard();
+          highlightNetwork(a.name);
+        });
+        body.appendChild(tr);
+      });
+    }
+
+    function renderStrip() {
+      var box = document.getElementById('strip');
+      box.textContent = '';
+
+      if (DATA.flights.length === 0) {
+        var empty = document.createElement('div');
+        empty.className = 'strip-row';
+        empty.textContent = 'Sin tráfico en este instante';
+        box.appendChild(empty);
+        return;
+      }
+
+      DATA.flights.forEach(function (f) {
+        var row = document.createElement('div');
+        row.className =
+          'strip-row' + (selected.kind === 'flight' && selected.id === f.id ? ' on' : '');
+
+        var cs = document.createElement('span');
+        cs.className = 'cs';
+        cs.textContent = f.callsign;
+
+        var leg = document.createElement('span');
+        leg.textContent = f.origin + ' → ' + f.destination;
+
+        var pr = document.createElement('span');
+        pr.className = 'pr';
+        var p = planeById[f.id];
+        pr.textContent = Math.round((p && p.pos ? p.pos.t : f.progress) * 100) + '%';
+
+        row.appendChild(cs);
+        row.appendChild(leg);
+        row.appendChild(pr);
+        row.addEventListener('click', function () { selectFlight(f.id); });
+        box.appendChild(row);
+      });
+    }
+
+    function dl(rows) {
+      var wrap = document.createElement('dl');
+      wrap.className = 'rows';
+      rows.forEach(function (r) {
+        var row = document.createElement('div');
+        row.className = 'row';
+        var dt = document.createElement('dt');
+        dt.textContent = r[0];
+        var dd = document.createElement('dd');
+        dd.textContent = r[1];
+        if (r[2]) dd.className = r[2];
+        row.appendChild(dt);
+        row.appendChild(dd);
+        wrap.appendChild(row);
+      });
+      return wrap;
+    }
+
+    function section(title) {
+      var s = document.createElement('div');
+      s.className = 'section';
+      var h = document.createElement('h2');
+      h.textContent = title;
+      s.appendChild(h);
+      return s;
+    }
+
+    function renderInspector() {
+      var host = document.getElementById('inspector');
+      host.textContent = '';
+
+      if (selected.kind === 'airport') return renderAirportPanel(host);
+      if (selected.kind === 'flight' && selected.id) return renderFlightPanel(host);
+      renderHelpPanel(host);
+    }
+
+    function renderFlightPanel(host) {
+      var f = DATA.flights.filter(function (x) { return x.id === selected.id; })[0];
+      if (!f) return renderHelpPanel(host);
+
+      var p = planeById[f.id];
+      var t = p && p.pos ? p.pos.t : f.progress;
+      var remaining = Math.max(0, Math.round((Date.parse(f.arrival) - Date.now()) / 60000));
+
+      var s = section('Vuelo seleccionado');
+
+      var head = document.createElement('div');
+      head.style.display = 'flex';
+      head.style.justifyContent = 'space-between';
+      head.style.alignItems = 'center';
+      head.style.marginBottom = '10px';
+
+      var cs = document.createElement('div');
+      cs.style.fontFamily = 'var(--mono)';
+      cs.style.fontSize = '20px';
+      cs.style.fontWeight = '600';
+      cs.style.letterSpacing = '0.03em';
+      cs.textContent = f.callsign;
+
+      var pill = document.createElement('span');
+      pill.className = 'pill';
+      pill.textContent = t >= 1 ? 'Aterrizado' : 'En vuelo';
+
+      head.appendChild(cs);
+      head.appendChild(pill);
+      s.appendChild(head);
+
+      var leg = document.createElement('div');
+      leg.className = 'leg';
+
+      var from = document.createElement('div');
+      var fromCode = document.createElement('div');
+      fromCode.className = 'code';
+      fromCode.textContent = f.origin;
+      var fromCity = document.createElement('div');
+      fromCity.className = 'city';
+      fromCity.textContent = hhmm(f.departure);
+      from.appendChild(fromCode);
+      from.appendChild(fromCity);
+
+      var wire = document.createElement('div');
+      wire.className = 'wire';
+      var marker = document.createElement('i');
+      marker.style.left = (t * 100).toFixed(1) + '%';
+      wire.appendChild(marker);
+
+      var to = document.createElement('div');
+      to.style.textAlign = 'right';
+      var toCode = document.createElement('div');
+      toCode.className = 'code';
+      toCode.textContent = f.destination;
+      var toCity = document.createElement('div');
+      toCity.className = 'city';
+      toCity.textContent = hhmm(f.arrival);
+      to.appendChild(toCode);
+      to.appendChild(toCity);
+
+      leg.appendChild(from);
+      leg.appendChild(wire);
+      leg.appendChild(to);
+      s.appendChild(leg);
+
+      s.appendChild(
+        dl([
+          ['Compañía', f.airline],
+          ['Aeronave', f.aircraft],
+          ['Pasajeros', nf.format(f.pax) + ' / ' + nf.format(f.seats)],
+          ['Ocupación', Math.round((f.pax / f.seats) * 100) + ' %'],
+          ['Distancia', nf.format(f.distanceKm) + ' km'],
+          ['Altitud', nf.format(p && p.pos ? Math.round(altitudeAt(t, f.distanceKm)) : f.altitudeM) + ' m'],
+          ['Rumbo', Math.round(p && p.pos ? p.pos.heading : f.heading) + '°'],
+          ['Restante', t >= 1 ? '—' : remaining + ' min'],
+        ])
+      );
+
+      var meter = document.createElement('div');
+      meter.className = 'meter';
+      var bar = document.createElement('i');
+      bar.style.width = (t * 100).toFixed(1) + '%';
+      meter.appendChild(bar);
+      s.appendChild(meter);
+
+      host.appendChild(s);
+
+      var note = section('Cómo se calcula');
+      var text = document.createElement('p');
+      text.className = 'note';
+      text.innerHTML =
+        'El servidor <b>no guarda la posición</b> de este avión. Guarda su plan ' +
+        '—origen, destino, hora de salida y hora de llegada— y esta página ' +
+        'interpola sobre el arco de círculo máximo contra el reloj. Por eso el ' +
+        'símbolo se mueve sin pedir nada, y todos los jugadores lo ven en el ' +
+        'mismo sitio.';
+      note.appendChild(text);
+      host.appendChild(note);
+    }
+
+    function altitudeAt(t, distanceKm) {
+      var cruise = distanceKm < 500 ? 7500 : distanceKm < 1500 ? 10000 : 11600;
+      if (t <= 0.08) return cruise * (t / 0.08);
+      if (t >= 0.88) return cruise * ((1 - t) / 0.12);
+      return cruise;
+    }
+
+    function renderAirportPanel(host) {
+      var a = DATA.airports.filter(function (x) { return x.iata === selected.id; })[0];
+      if (!a) return renderHelpPanel(host);
+
+      var inbound = DATA.flights.filter(function (f) { return f.destination === a.iata; });
+      var outbound = DATA.flights.filter(function (f) { return f.origin === a.iata; });
+
+      var s = section('Aeropuerto');
+
+      var head = document.createElement('div');
+      head.style.display = 'flex';
+      head.style.alignItems = 'baseline';
+      head.style.gap = '10px';
+      head.style.marginBottom = '10px';
+
+      var code = document.createElement('div');
+      code.className = 'code';
+      code.style.fontFamily = 'var(--mono)';
+      code.style.fontSize = '26px';
+      code.style.fontWeight = '600';
+      code.textContent = a.iata;
+
+      var city = document.createElement('div');
+      city.className = 'city';
+      city.textContent = a.city + ' · ' + a.country;
+
+      head.appendChild(code);
+      head.appendChild(city);
+      s.appendChild(head);
+
+      var full = document.createElement('div');
+      full.className = 'note';
+      full.style.marginBottom = '12px';
+      full.textContent = a.name;
+      s.appendChild(full);
+
+      s.appendChild(
+        dl([
+          ['Clase', 'Nivel ' + a.size + ' de 5'],
+          ['Peso de mercado', nf.format(Math.round(a.weight))],
+          ['Rutas de salida', String(a.departures)],
+          ['En aproximación', String(inbound.length)],
+          ['Despegados', String(outbound.length)],
+        ])
+      );
+
+      var meter = document.createElement('div');
+      meter.className = 'meter calm';
+      var bar = document.createElement('i');
+      bar.style.width = (a.size / 5) * 100 + '%';
+      meter.appendChild(bar);
+      s.appendChild(meter);
+
+      host.appendChild(s);
+
+      var note = section('Sobre el peso de mercado');
+      var text = document.createElement('p');
+      text.className = 'note';
+      text.innerHTML =
+        'El peso de mercado alimenta el modelo de gravedad que genera la demanda. ' +
+        'Hoy se deriva de datos observables del aeropuerto —categoría, pistas y ' +
+        'longitud— y es <b>provisional</b>: sustituirlo por tráfico real de ' +
+        'pasajeros es la primera tarea de calibración pendiente.';
+      note.appendChild(text);
+      host.appendChild(note);
+    }
+
+    function renderHelpPanel(host) {
+      var s = section('Sin selección');
+      var text = document.createElement('p');
+      text.className = 'note';
+      text.textContent =
+        'Toca un avión para ver su vuelo, o un aeropuerto para ver su mercado. ' +
+        'Rueda del ratón o pellizco para acercar.';
+      s.appendChild(text);
+      host.appendChild(s);
+    }
+
+    /* ─── Arranque ──────────────────────────────────────────────────── */
+
+    var currentCarrier = DATA.airlines.length > 0 ? DATA.airlines[0].name : '';
+
+    svg.addEventListener('click', function () {
+      if (drag !== null && drag.moved) return;
+    });
+
+    function tickClock() {
+      var d = new Date();
+      document.getElementById('clock').textContent =
+        String(d.getUTCHours()).padStart(2, '0') +
+        ':' +
+        String(d.getUTCMinutes()).padStart(2, '0') +
+        ':' +
+        String(d.getUTCSeconds()).padStart(2, '0');
+    }
+
+    renderTopbar();
+    renderCarrier(currentCarrier);
+    highlightNetwork(currentCarrier);
+    renderBoard();
+    renderStrip();
+    renderInspector();
+    applyCam();
+    tickClock();
+
+    window.addEventListener('resize', function () {
+      clampCam();
+      applyCam();
+    });
+
+    setInterval(tickClock, 1000);
+
+    // Los aviones se mueven de verdad: la posición se recalcula contra el
+    // reloj, no se anima por animar.
+    setInterval(function () {
+      render();
+      renderStrip();
+      if (selected.kind === 'flight') renderInspector();
+    }, 1000);
+  })();
+</script>

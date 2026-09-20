@@ -85,6 +85,9 @@ export default tseslint.config(
       '@typescript-eslint/no-unnecessary-condition': 'off',
       '@typescript-eslint/restrict-template-expressions': ['error', { allowNumber: true }],
       'import-x/no-cycle': ['error', { maxDepth: 10 }],
+      // TypeScript exige corchetes para las firmas de índice
+      // (noPropertyAccessFromIndexSignature); esta regla pide lo contrario.
+      '@typescript-eslint/dot-notation': 'off',
       'no-console': 'error',
       complexity: ['error', 18],
       'max-lines-per-function': ['error', { max: 90, skipBlankLines: true, skipComments: true }],
@@ -129,7 +132,7 @@ export default tseslint.config(
     // Frontera de datos: aquí es donde las filas del driver, que no tienen tipo,
     // se convierten en entidades tipadas. Es el único sitio del repositorio
     // donde se permite tocar valores sin tipar, y está acotado a propósito.
-    files: ['packages/db/src/mappers/**/*.ts'],
+    files: ['packages/db/src/mappers/**/*.ts', 'scripts/export-ui-snapshot.ts'],
     rules: {
       '@typescript-eslint/no-explicit-any': 'off',
       '@typescript-eslint/no-unsafe-assignment': 'off',
