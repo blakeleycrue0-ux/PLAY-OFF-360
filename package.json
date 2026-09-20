@@ -31,7 +31,7 @@
     "verify": "pnpm typecheck && pnpm lint && pnpm test",
     "data:build-map": "tsx scripts/build-map-geometry.ts",
     "ui:snapshot": "tsx scripts/export-ui-snapshot.ts",
-    "ui:preview": "tsx scripts/build-preview.ts",
+    "ui:preview": "node scripts/build-preview.mjs",
     "ui:build": "pnpm ui:snapshot && pnpm ui:preview"
   },
   "devDependencies": {

@@ -10,11 +10,11 @@ coverage/
 # El snapshot normalizado en data/*.json SÍ se versiona: ver ADR-011.
 data/source/
 
-# Salida de la vista previa: se construye con `pnpm ui:preview`.
-# La instantánea de datos que la alimenta (data/ui-snapshot.json) SÍ se
-# versiona: sin ella el despliegue no puede construirse, porque generarla
-# exige una base de datos con un mundo simulado.
-dist/
+# dist/ SÍ se versiona. La consola es un artefacto estático de un único
+# fichero, y tenerlo en el repositorio significa que el despliegue funciona
+# aunque la construcción no llegue a ejecutarse. Se regenera con
+# `pnpm ui:preview`; la instantánea que lo alimenta también se versiona,
+# porque generarla exige una base de datos con un mundo simulado.
 
 # Salida de compilación de los scripts de construcción.
 .tsbuild/

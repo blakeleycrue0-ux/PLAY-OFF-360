@@ -6,14 +6,16 @@
 # eso se hace en desarrollo con `pnpm ui:build`.
 
 [build]
-  command = "pnpm ui:preview"
+  command = "node scripts/build-preview.mjs"
   publish = "dist"
 
 [build.environment]
   NODE_VERSION = "22"
-  # Playwright sólo se usa en desarrollo para revisar la página; sin esto,
-  # la instalación se descargaría un navegador entero en cada construcción.
+  # La construcción no necesita ninguna dependencia: es un script de Node sin
+  # importaciones externas. Aun así se deja preparado por si algún día hiciera
+  # falta instalar, para que no se descargue un navegador entero.
   PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD = "1"
+  NPM_FLAGS = "--production=false"
 
 # Una sola página: cualquier ruta la sirve, en vez de devolver un 404.
 [[redirects]]

@@ -1,21 +1,25 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 /**
- * Inyecta la instantánea de datos en la plantilla de la consola y deja el
- * resultado en `dist/`, que es lo que publica Netlify.
+ * Construye la consola inyectando la instantánea de datos en la plantilla.
  *
- * La vista previa se construye, no se escribe a mano: los datos que enseña son
- * siempre los que produjo la última simulación, y nadie tiene que acordarse de
- * copiarlos. Por eso `dist/` no se versiona y la plantilla y la instantánea sí.
+ * Está escrito en JavaScript plano y **sin una sola dependencia** a propósito.
+ * Es lo que ejecuta Netlify, y cualquier cosa que necesite instalar antes
+ * —TypeScript, tsx, el workspace entero— es una forma nueva de que el
+ * despliegue falle. Con esto basta `node`, que siempre está.
+ *
+ *   node scripts/build-preview.mjs
  */
-const ROOT = path.resolve(import.meta.dirname, '..');
+
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const TEMPLATE = path.join(ROOT, 'apps', 'web', 'preview', 'template.html');
 const SNAPSHOT = path.join(ROOT, 'data', 'ui-snapshot.json');
 const OUT_DIR = path.join(ROOT, 'dist');
 const OUT = path.join(OUT_DIR, 'index.html');
 
-async function main(): Promise<void> {
+async function main() {
   const [template, snapshot] = await Promise.all([
     readFile(TEMPLATE, 'utf8'),
     readFile(SNAPSHOT, 'utf8'),
@@ -32,12 +36,13 @@ async function main(): Promise<void> {
 
   await mkdir(OUT_DIR, { recursive: true });
   await writeFile(OUT, html);
+
   console.log(
-    `Vista previa construida: ${(html.length / 1024).toFixed(0)} KB → ${path.relative(ROOT, OUT)}`,
+    `Consola construida: ${(html.length / 1024).toFixed(0)} KB → ${path.relative(ROOT, OUT)}`,
   );
 }
 
-main().catch((error: unknown) => {
+main().catch((error) => {
   console.error(error instanceof Error ? error.message : error);
   process.exitCode = 1;
 });
