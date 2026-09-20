@@ -1,5 +1,18 @@
 {
   "extends": "./tsconfig.base.json",
-  "compilerOptions": { "noEmit": true, "composite": false, "incremental": false, "types": ["node"] },
-  "include": ["packages/**/*.ts", "apps/**/*.ts", "scripts/**/*.ts", "*.ts", "*.js"]
+  "compilerOptions": {
+    "noEmit": true,
+    "composite": false,
+    "incremental": false,
+    "types": ["node"],
+    "allowJs": true
+  },
+  "include": [
+    "packages/**/*.ts",
+    "apps/**/*.ts",
+    "scripts/**/*.ts",
+    "*.ts",
+    "*.js",
+    "scripts/**/*.mjs"
+  ]
 }
