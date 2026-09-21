@@ -15,7 +15,7 @@
  * avia_paoa, abierto) es la primera tarea de calibración del proyecto.
  */
 
-export const NORMALISER_VERSION = '1.0.0';
+export const NORMALISER_VERSION = '1.1.0';
 
 /** Países del espacio Schengen a fecha del conjunto de datos. Hecho, no estimación. */
 export const SCHENGEN_COUNTRIES: ReadonlySet<string> = new Set([
@@ -153,6 +153,28 @@ function isBusinessHubCity(city: string): boolean {
     if (normalised.startsWith(normaliseCityName(hub))) return true;
   }
   return false;
+}
+
+/**
+ * Nombre corto de la ciudad, para enseñar.
+ *
+ * La fuente publica el municipio administrativo, que a veces no es un nombre de
+ * ciudad sino una dirección: «Paris (Roissy-en-France, Val-d'Oise)»,
+ * «Newcastle upon Tyne, Tyne and Wear», «Kristiansand(Kjevik)». Puesto en una
+ * pantalla ocupa tres líneas y no dice nada más que la primera palabra.
+ *
+ * Se corta por el primer paréntesis, coma o barra: en este conjunto de datos la
+ * parte que queda delante es siempre la ciudad reconocible. Si el corte dejara
+ * la cadena vacía se devuelve el original, porque un nombre feo es mejor que
+ * ninguno.
+ *
+ * Ojo: esto es **sólo** para enseñar. El índice de negocio sigue mirando el
+ * municipio de la fuente, que es donde están los casos como «Spata-Artemida»
+ * o «Kloten», y que no debe cambiar por un retoque de presentación.
+ */
+export function displayCity(municipality: string): string {
+  const cut = municipality.split(/[(,/]/)[0]?.trim() ?? '';
+  return cut === '' ? municipality.trim() : cut;
 }
 
 export interface RawAirport {
