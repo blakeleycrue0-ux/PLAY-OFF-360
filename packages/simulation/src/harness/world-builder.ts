@@ -280,6 +280,15 @@ interface RotationLeg {
   readonly departureMinute: Minutes;
 }
 
+/**
+ * Ventana operativa de un avión, en **hora local de su base**.
+ *
+ * Que sea local y no UTC no es un detalle de presentación: una aerolínea con
+ * base en Bucarest abre el día tres horas antes, en UTC, que una con base en
+ * Lisboa, y las dos abren a las seis de la mañana para su pasaje. Cuando esto
+ * se medía en UTC, todo el mundo despegaba a la misma hora absoluta y la
+ * operación del mundo cabía en una franja artificialmente estrecha.
+ */
 const ROTATION_START_HOUR = 6;
 const ROTATION_LAST_HOUR = 22;
 /** Franjas de arranque distintas para escalonar la flota a lo largo del día. */
@@ -307,6 +316,11 @@ function buildRotation(
 ): readonly RotationLeg[] {
   const legs: RotationLeg[] = [];
 
+  // El horario se construye en hora local de la base y se pasa a UTC al final,
+  // que es como lo publica una aerolínea de verdad.
+  const hub = assigned[0]?.origin;
+  const hubOffsetMinutes = hub === undefined ? 0 : hub.utcOffsetMinutes;
+
   // Una flota no despega entera al amanecer. Cada avión arranca su rotación en
   // una franja distinta, de modo que la operación cubre el día completo en vez
   // de agotarse a media tarde. De paso reparte la presión sobre los
@@ -322,19 +336,32 @@ function buildRotation(
     legs.push({
       origin: candidate.origin,
       destination: candidate.destination,
-      departureMinute: minutes(cursor),
+      departureMinute: toUtcMinute(cursor, hubOffsetMinutes),
     });
     cursor += block + turnaround;
 
     legs.push({
       origin: candidate.destination,
       destination: candidate.origin,
-      departureMinute: minutes(cursor),
+      departureMinute: toUtcMinute(cursor, hubOffsetMinutes),
     });
     cursor += block + turnaround;
   }
 
   return legs;
+}
+
+/**
+ * Pasa un minuto del día local de la base a minuto del día UTC.
+ *
+ * Con la ventana operativa (06:00–22:00 locales) y los husos que hay en el
+ * conjunto de datos (de UTC−1 a UTC+3) el resultado siempre cae dentro del
+ * mismo día, pero se normaliza igualmente: la alternativa es que un huso nuevo
+ * meta un minuto negativo en la base sin que nadie se entere.
+ */
+export function toUtcMinute(localMinute: number, offsetMinutes: number): Minutes {
+  const utc = localMinute - offsetMinutes;
+  return minutes(((utc % 1440) + 1440) % 1440);
 }
 
 async function createAircraft(
