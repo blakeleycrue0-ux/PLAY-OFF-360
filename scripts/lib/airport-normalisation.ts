@@ -156,6 +156,72 @@ function isBusinessHubCity(city: string): boolean {
 }
 
 /**
+ * A qué ciudad sirve cada aeropuerto, cuando no es la del municipio.
+ *
+ * Muchos aeropuertos grandes están en un pueblo de las afueras: Atenas está en
+ * Spata-Artemida, Bruselas en Zaventem, Lyon en Colombier-Saugnieu. El municipio
+ * es correcto y es lo que publica la fuente, pero nadie dice que vuela a
+ * Rheinmünster: dice que vuela a Karlsruhe.
+ *
+ * Es una lista escrita a mano, y por eso está incompleta a propósito: sólo
+ * entran los casos en los que el municipio es una pedanía y la ciudad servida
+ * no admite discusión. Lo que no esté aquí se queda con su municipio, que es
+ * preferible a inventar. Añadir una entrada es un dato comprobable, no una
+ * opinión.
+ */
+const CITY_SERVED: ReadonlyMap<string, string> = new Map([
+  ['ACE', 'Lanzarote'],
+  ['ADB', 'İzmir'],
+  ['ATH', 'Athens'],
+  ['BGY', 'Bergamo'],
+  ['BNX', 'Banja Luka'],
+  ['BRU', 'Brussels'],
+  ['BSL', 'Basel'],
+  ['CHQ', 'Chania'],
+  ['COV', 'Adana'],
+  ['EDI', 'Edinburgh'],
+  ['FKB', 'Karlsruhe'],
+  ['FMO', 'Münster'],
+  ['FUE', 'Fuerteventura'],
+  ['GRZ', 'Graz'],
+  ['HDF', 'Heringsdorf'],
+  ['IOM', 'Isle of Man'],
+  ['KRK', 'Kraków'],
+  ['KSF', 'Kassel'],
+  ['KZR', 'Kütahya'],
+  ['LEJ', 'Leipzig'],
+  ['LEN', 'León'],
+  ['LGG', 'Liège'],
+  ['LIL', 'Lille'],
+  ['LIN', 'Milan'],
+  ['LJU', 'Ljubljana'],
+  ['LYS', 'Lyon'],
+  ['MRS', 'Marseille'],
+  ['MXP', 'Milan'],
+  ['NOC', 'Knock'],
+  ['OSR', 'Ostrava'],
+  ['OST', 'Ostend'],
+  ['OTP', 'Bucharest'],
+  ['OVD', 'Asturias'],
+  ['PAD', 'Paderborn'],
+  ['PRN', 'Pristina'],
+  ['PXO', 'Porto Santo'],
+  ['RMU', 'Murcia'],
+  ['SAW', 'Istanbul'],
+  ['SCR', 'Sälen'],
+  ['SKP', 'Skopje'],
+  ['TER', 'Terceira'],
+  ['TIA', 'Tirana'],
+  ['TRN', 'Turin'],
+  ['TRS', 'Trieste'],
+  ['TZL', 'Tuzla'],
+  ['VIT', 'Vitoria-Gasteiz'],
+  ['VRN', 'Verona'],
+  ['WMI', 'Warsaw'],
+  ['ZAG', 'Zagreb'],
+]);
+
+/**
  * Nombre corto de la ciudad, para enseñar.
  *
  * La fuente publica el municipio administrativo, que a veces no es un nombre de
@@ -172,7 +238,10 @@ function isBusinessHubCity(city: string): boolean {
  * municipio de la fuente, que es donde están los casos como «Spata-Artemida»
  * o «Kloten», y que no debe cambiar por un retoque de presentación.
  */
-export function displayCity(municipality: string): string {
+export function displayCity(municipality: string, iata?: string): string {
+  const served = iata === undefined ? undefined : CITY_SERVED.get(iata);
+  if (served !== undefined) return served;
+
   const cut = municipality.split(/[(,/]/)[0]?.trim() ?? '';
   return cut === '' ? municipality.trim() : cut;
 }

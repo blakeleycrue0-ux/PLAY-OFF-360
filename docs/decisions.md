@@ -330,6 +330,52 @@ No es sólo presentación: la demanda depende de la hora local de salida
 (`docs/04`), así que un horario construido en UTC estaba evaluando la
 conveniencia del vuelo contra una hora que no es la que ve el pasajero.
 
+### ADR-018 · El planeta es la fotografía de la NASA, y la luz sale del reloj · vigente
+
+El globo se rellenaba con colores planos. Ahora lleva envuelta la imagen
+*Blue Marble: Next Generation* de la NASA (dominio público, acreditada en
+`apps/web/preview/textures/README.md`), y el lado iluminado se calcula con la
+posición real del Sol para el instante que marca el reloj del mundo.
+
+El terminador **no es decoración**: el mundo del juego opera en tiempo real y en
+husos distintos (ADR-017), así que ver qué parte de la red está de noche es
+información de operaciones, no un efecto.
+
+Va en WebGL, no en el lienzo 2D, por una razón medible: envolver una imagen
+equirectangular sobre una ortográfica exige, por cada píxel, deshacer la
+rotación y convertir a longitud y latitud. En JavaScript son cien mil
+iteraciones por fotograma y el arrastre deja de ir fluido; en la tarjeta gráfica
+es una línea de *shader*. El lienzo 2D sigue encima con lo que sí es vectorial:
+fronteras, rutas, aeropuertos, arcos y aviones.
+
+Si no hay WebGL, o si la imagen no llega, se dibuja el planeta vectorial de
+antes. No es una ruta muerta: es lo que se ve al abrir el fichero desde el disco,
+donde el navegador considera la imagen de otro origen y se niega a subirla.
+
+La textura se publica como fichero aparte, no incrustada en el HTML: en base64
+engordaría el documento 430 KB y habría que volver a bajarla en cada visita.
+
+### ADR-019 · Qué ciudad sirve un aeropuerto es un dato, no una heurística · vigente
+
+La fuente publica el municipio, y muchos aeropuertos grandes están en un pueblo
+de las afueras: Atenas está en Spata-Artemida, Bruselas en Zaventem, Karlsruhe
+en Rheinmünster. Nadie dice que vuela a Rheinmünster.
+
+Se probaron reglas automáticas —sacar la ciudad del nombre del aeropuerto— y
+fallan justo donde más se ven: CDG se llama «Charles de Gaulle» y Madeira
+«Cristiano Ronaldo». No hay regla; hay un dato.
+
+Por eso hay una tabla escrita a mano (`CITY_SERVED`) y está **incompleta a
+propósito**: sólo entran los casos en los que el municipio es una pedanía y la
+ciudad servida no admite discusión. Lo que no esté en la tabla se queda con su
+municipio recortado, que es preferible a inventar. Añadir una entrada es un dato
+comprobable.
+
+Vive en el normalizador de aeropuertos, no en la interfaz, para que lo vean
+igual la API, la vista previa y el generador de nombres de aerolínea —que antes
+recortaba la ciudad por su cuenta y ahora ya no, porque era la misma regla
+escrita dos veces.
+
 ---
 
 ## Pendientes de calibración

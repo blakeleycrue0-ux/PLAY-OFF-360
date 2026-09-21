@@ -157,6 +157,18 @@ describe('nombre corto de la ciudad', () => {
     expect(displayCity('(Sin municipio)')).toBe('(Sin municipio)');
   });
 
+  it('usa la ciudad servida cuando el municipio es una pedanía', () => {
+    expect(displayCity('Spata-Artemida', 'ATH')).toBe('Athens');
+    expect(displayCity('Rheinmünster', 'FKB')).toBe('Karlsruhe');
+    expect(displayCity('Zaventem', 'BRU')).toBe('Brussels');
+    expect(displayCity('Colombier-Saugnieu, Rhône', 'LYS')).toBe('Lyon');
+  });
+
+  it('sin entrada en la tabla se queda con el municipio recortado', () => {
+    expect(displayCity('Newcastle upon Tyne, Tyne and Wear', 'NCL')).toBe('Newcastle upon Tyne');
+    expect(displayCity('Madrid', 'MAD')).toBe('Madrid');
+  });
+
   it('no cambia la detección de hubs de negocio, que mira el municipio original', () => {
     // El índice se calcula sobre el municipio de la fuente: recortarlo aquí no
     // debe mover el número.

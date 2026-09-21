@@ -478,12 +478,10 @@ const NAME_SUFFIX: Readonly<Record<NpcPolicy['strategy'], string>> = {
  * parte legible para que el nombre quepa en una línea de tabla.
  */
 function airlineName(hub: Airport, policy: NpcPolicy): string {
-  const city = (hub.city || hub.name)
-    .split(/[,(/]/)[0]
-    ?.split(/\s+(?:am|an|de|del|sur|upon)\s+/i)[0]
-    ?.trim();
-
-  const base = city === undefined || city.length === 0 ? hub.iata : city;
+  // El nombre de la ciudad ya viene limpio del normalizador de aeropuertos
+  // (`displayCity`). Volver a recortarlo aquí sería la misma regla escrita dos
+  // veces, y dos copias de una regla acaban divergiendo.
+  const base = hub.city.trim().length === 0 ? hub.iata : hub.city.trim();
   return `${base} ${NAME_SUFFIX[policy.strategy]}`;
 }
 

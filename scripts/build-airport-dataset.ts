@@ -154,7 +154,7 @@ function normalise(raw: RawAirport): Record<string, unknown> {
     name: raw.name,
     // Nombre corto para enseñar; el índice de negocio sigue leyendo el
     // municipio de la fuente a través de `raw`.
-    city: displayCity(raw.city),
+    city: displayCity(raw.city, raw.iata),
     country: raw.country,
     latitude: Math.round(raw.latitude * 1e6) / 1e6,
     longitude: Math.round(raw.longitude * 1e6) / 1e6,

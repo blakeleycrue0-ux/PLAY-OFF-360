@@ -85,6 +85,7 @@
   /* ---------------------------------------------------------------- escena */
 
   #stars,
+  #earth,
   #globe {
     position: fixed;
     inset: 0;
@@ -97,8 +98,13 @@
     z-index: 0;
   }
 
-  #globe {
+  #earth {
     z-index: 1;
+    pointer-events: none;
+  }
+
+  #globe {
+    z-index: 2;
     /*
      * Esto es lo que arregla el zoom. Sin touch-action:none el navegador se
      * queda el pellizco y el arrastre para hacer su propio zoom de página, y el
@@ -113,7 +119,7 @@
     position: fixed;
     left: 0;
     right: 0;
-    z-index: 2;
+    z-index: 3;
     pointer-events: none;
   }
 
@@ -142,7 +148,7 @@
   #chips {
     position: fixed;
     inset: 0;
-    z-index: 3;
+    z-index: 4;
     pointer-events: none;
   }
 
@@ -191,7 +197,7 @@
   .app {
     position: fixed;
     inset: 0;
-    z-index: 4;
+    z-index: 5;
     display: grid;
     grid-template-rows: auto 1fr auto;
     padding: var(--safe-top) 0 var(--safe-bottom);
@@ -564,7 +570,7 @@
     left: 0;
     right: 0;
     bottom: 0;
-    z-index: 6;
+    z-index: 7;
     max-height: 88%;
     display: flex;
     flex-direction: column;
@@ -793,7 +799,7 @@
   .veil {
     position: fixed;
     inset: 0;
-    z-index: 5;
+    z-index: 6;
     background: rgba(4, 4, 6, 0.55);
     opacity: 0;
     pointer-events: none;
@@ -877,6 +883,7 @@
 </style>
 
 <canvas id="stars" aria-hidden="true"></canvas>
+<canvas id="earth" aria-hidden="true"></canvas>
 <canvas
   id="globe"
   role="img"
@@ -1029,6 +1036,9 @@
     'use strict';
 
     var DATA = JSON.parse(document.getElementById('snapshot').textContent);
+    // La fotografía va como fichero aparte, no incrustada: así el navegador la
+    // cachea entre visitas y el HTML no engorda 400 KB en base64.
+    var EARTH_TEXTURE = 'earth-bmng-2048.jpg';
     var d3 = window.d3;
     var RAD = Math.PI / 180;
     var DEG = 180 / Math.PI;
@@ -1175,18 +1185,236 @@
       return d3.geoDistance([lon, lat], [cam.lon, cam.lat]) < Math.PI / 2 - 0.01;
     }
 
-    /* ------------------------------------------------------ capa estática */
+    /* ------------------------------------------------- la Tierra de verdad */
 
-    function paintWorld() {
-      var cx = focus.x;
-      var cy = focus.y;
-      var r = projection.scale();
+    /**
+     * El planeta se dibuja con la fotografía de la NASA envuelta sobre la
+     * esfera, no con un relleno de color.
+     *
+     * Va en WebGL y no en el lienzo 2D por una razón concreta: envolver una
+     * imagen equirectangular sobre una ortográfica exige, para cada píxel,
+     * deshacer la rotación y convertir a longitud y latitud. En JavaScript eso
+     * es un bucle de cien mil iteraciones por fotograma y el arrastre se
+     * arrastra; en la tarjeta gráfica es lo que sabe hacer.
+     *
+     * Si no hay WebGL —o si la imagen no llega— la página no se queda en negro:
+     * `paintVectorGlobe()` dibuja el planeta como antes, en vectores.
+     */
+    var earthCanvas = document.getElementById('earth');
+    var earth = null;
 
-      wctx.setTransform(view.dpr, 0, 0, view.dpr, 0, 0);
-      wctx.clearRect(0, 0, view.w, view.h);
+    var VERTEX_SHADER = [
+      'attribute vec2 aPos;',
+      'void main() { gl_Position = vec4(aPos, 0.0, 1.0); }',
+    ].join('\n');
 
-      // Atmósfera: un halo por fuera del borde, que es lo que separa el planeta
-      // del vacío sin necesidad de dibujarle un contorno duro.
+    var FRAGMENT_SHADER = [
+      'precision highp float;',
+      'uniform vec2 uCentre;', // en píxeles de lienzo, con la Y hacia arriba
+      'uniform float uRadius;',
+      'uniform vec2 uRot;', // longitud y latitud del centro, en radianes
+      'uniform vec3 uSun;', // dirección al Sol en el marco geográfico
+      'uniform sampler2D uEarth;',
+      'uniform float uReady;',
+      '',
+      'void main() {',
+      '  vec2 p = (gl_FragCoord.xy - uCentre) / uRadius;',
+      '  float r2 = dot(p, p);',
+      '',
+      // Fuera del disco sólo queda la atmósfera, que es lo que separa el
+      // planeta del vacío sin dibujarle un contorno duro.
+      '  if (r2 > 1.0) {',
+      '    float glow = smoothstep(1.34, 1.0, sqrt(r2));',
+      '    gl_FragColor = vec4(vec3(0.33, 0.52, 0.74) * glow, glow * 0.42);',
+      '    return;',
+      '  }',
+      '',
+      // Deshacer la ortográfica: el punto visible de la esfera unidad.
+      '  float front = sqrt(max(0.0, 1.0 - r2));',
+      '  float cosLat = cos(uRot.y);',
+      '  float sinLat = sin(uRot.y);',
+      '  vec3 n = vec3(',
+      '    front * cosLat - p.y * sinLat,',
+      '    p.x,',
+      '    front * sinLat + p.y * cosLat',
+      '  );',
+      '',
+      '  float lon = atan(n.y, n.x) + uRot.x;',
+      '  float lat = asin(clamp(n.z, -1.0, 1.0));',
+      '  vec2 uv = vec2(fract(lon / 6.283185307 + 0.5), 0.5 - lat / 3.141592653);',
+      '',
+      '  vec3 base = uReady > 0.5 ? texture2D(uEarth, uv).rgb : vec3(0.10, 0.13, 0.17);',
+      '',
+      // El terminador sale del reloj del mundo, no de una luz decorativa
+      // colocada a ojo: el lado iluminado es el que de verdad tiene sol ahora.
+      '  float ndl = dot(n, uSun);',
+      '  float light = smoothstep(-0.14, 0.20, ndl);',
+      '',
+      // La fotografía viene de un satélite a mediodía y sale demasiado clara
+      // para una interfaz negra: se baja la exposición y se le quita algo de
+      // saturación. Sigue siendo la imagen real, sólo que revelada más oscura.
+      '  float grey = dot(base, vec3(0.299, 0.587, 0.114));',
+      '  vec3 graded = mix(vec3(grey), base, 0.78) * vec3(0.62, 0.66, 0.76);',
+      '  vec3 day = graded;',
+      '  vec3 night = graded * 0.13 + vec3(0.013, 0.018, 0.032);',
+      '  vec3 col = mix(night, day, light);',
+      '',
+      // Oscurecimiento del limbo y un filo azul en el borde iluminado.
+      '  float limb = sqrt(max(0.0, 1.0 - r2));',
+      '  col *= mix(0.72, 1.0, pow(limb, 0.45));',
+      '  col += vec3(0.20, 0.36, 0.56) * pow(1.0 - limb, 4.0) * light * 0.70;',
+      '',
+      '  gl_FragColor = vec4(col, 1.0);',
+      '}',
+    ].join('\n');
+
+    function compile(gl, type, source) {
+      var shader = gl.createShader(type);
+      gl.shaderSource(shader, source);
+      gl.compileShader(shader);
+      if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+        gl.deleteShader(shader);
+        return null;
+      }
+      return shader;
+    }
+
+    function initEarth() {
+      var gl = null;
+      try {
+        gl =
+          earthCanvas.getContext('webgl', { alpha: true, antialias: false, depth: false }) ||
+          earthCanvas.getContext('experimental-webgl', { alpha: true, depth: false });
+      } catch (ignored) {
+        gl = null;
+      }
+      if (!gl) return null;
+
+      var vs = compile(gl, gl.VERTEX_SHADER, VERTEX_SHADER);
+      var fs = compile(gl, gl.FRAGMENT_SHADER, FRAGMENT_SHADER);
+      if (!vs || !fs) return null;
+
+      var program = gl.createProgram();
+      gl.attachShader(program, vs);
+      gl.attachShader(program, fs);
+      gl.linkProgram(program);
+      if (!gl.getProgramParameter(program, gl.LINK_STATUS)) return null;
+      gl.useProgram(program);
+
+      var buffer = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
+      var aPos = gl.getAttribLocation(program, 'aPos');
+      gl.enableVertexAttribArray(aPos);
+      gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0);
+
+      var texture = gl.createTexture();
+      gl.bindTexture(gl.TEXTURE_2D, texture);
+      // Un píxel mientras llega la fotografía, para que no parpadee.
+      gl.texImage2D(
+        gl.TEXTURE_2D,
+        0,
+        gl.RGBA,
+        1,
+        1,
+        0,
+        gl.RGBA,
+        gl.UNSIGNED_BYTE,
+        new Uint8Array([26, 33, 43, 255]),
+      );
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+
+      gl.enable(gl.BLEND);
+      gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+
+      var state = {
+        gl: gl,
+        texture: texture,
+        ready: 0,
+        u: {
+          centre: gl.getUniformLocation(program, 'uCentre'),
+          radius: gl.getUniformLocation(program, 'uRadius'),
+          rot: gl.getUniformLocation(program, 'uRot'),
+          sun: gl.getUniformLocation(program, 'uSun'),
+          ready: gl.getUniformLocation(program, 'uReady'),
+        },
+      };
+
+      var image = new Image();
+      image.crossOrigin = 'anonymous';
+      image.addEventListener('load', function () {
+        // Subir la imagen puede fallar por razones que no son culpa de nadie:
+        // abierta desde el disco, cada fichero cuenta como otro origen y WebGL
+        // se niega. El planeta se queda con el color liso y las fronteras
+        // encima, que es feo pero funciona; sin este try la página se caía.
+        try {
+          gl.bindTexture(gl.TEXTURE_2D, texture);
+          gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 0);
+          gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
+          state.ready = 1;
+        } catch (ignored) {
+          state.ready = 0;
+        }
+        worldKey = '';
+      });
+      image.src = EARTH_TEXTURE;
+
+      return state;
+    }
+
+    /**
+     * Dirección al Sol en el marco geográfico, para la hora dada.
+     *
+     * Declinación por la aproximación habitual del día del año y longitud
+     * subsolar por la hora UTC. Se desprecia la ecuación del tiempo: como mucho
+     * son dieciséis minutos, que a este tamaño no mueve el terminador ni un
+     * píxel.
+     */
+    function sunDirection(now) {
+      var date = new Date(now);
+      var dayOfYear = Math.floor((now - Date.UTC(date.getUTCFullYear(), 0, 1)) / MS_DAY) + 1;
+      var declination = -23.44 * RAD * Math.cos(((2 * Math.PI) / 365.24) * (dayOfYear + 10));
+
+      var utcHours = date.getUTCHours() + date.getUTCMinutes() / 60 + date.getUTCSeconds() / 3600;
+      var longitude = (12 - utcHours) * 15 * RAD;
+
+      return [
+        Math.cos(declination) * Math.cos(longitude),
+        Math.cos(declination) * Math.sin(longitude),
+        Math.sin(declination),
+      ];
+    }
+
+    /** Cuánto sol le da a un punto: 0 noche cerrada, 1 mediodía. */
+    function daylight(lon, lat, sun) {
+      var la = lat * RAD;
+      var lo = lon * RAD;
+      var dot =
+        Math.cos(la) * Math.cos(lo) * sun[0] +
+        Math.cos(la) * Math.sin(lo) * sun[1] +
+        Math.sin(la) * sun[2];
+      return Math.max(0, Math.min(1, (dot + 0.14) / 0.34));
+    }
+
+    function paintEarth(sun) {
+      if (!earth) return;
+      var gl = earth.gl;
+      gl.viewport(0, 0, earthCanvas.width, earthCanvas.height);
+      gl.clearColor(0, 0, 0, 0);
+      gl.clear(gl.COLOR_BUFFER_BIT);
+      gl.uniform2f(earth.u.centre, focus.x * view.dpr, earthCanvas.height - focus.y * view.dpr);
+      gl.uniform1f(earth.u.radius, projection.scale() * view.dpr);
+      gl.uniform2f(earth.u.rot, cam.lon * RAD, cam.lat * RAD);
+      gl.uniform3f(earth.u.sun, sun[0], sun[1], sun[2]);
+      gl.uniform1f(earth.u.ready, earth.ready);
+      gl.drawArrays(gl.TRIANGLES, 0, 3);
+    }
+
+    /** El planeta de repuesto: sin WebGL, el mundo se dibuja como antes. */
+    function paintVectorGlobe(cx, cy, r) {
       var halo = wctx.createRadialGradient(cx, cy, r * 0.97, cx, cy, r * 1.16);
       halo.addColorStop(0, 'rgba(94,142,196,0.20)');
       halo.addColorStop(1, 'rgba(94,142,196,0)');
@@ -1195,8 +1423,6 @@
       wctx.arc(cx, cy, r * 1.16, 0, 2 * Math.PI);
       wctx.fill();
 
-      // Océano, iluminado desde arriba a la izquierda para que la esfera tenga
-      // volumen en vez de parecer un círculo plano.
       var sea = wctx.createRadialGradient(cx - r * 0.36, cy - r * 0.42, r * 0.05, cx, cy, r * 1.02);
       sea.addColorStop(0, '#1b2531');
       sea.addColorStop(0.55, '#101720');
@@ -1205,27 +1431,47 @@
       wctx.beginPath();
       wctx.arc(cx, cy, r, 0, 2 * Math.PI);
       wctx.fill();
+    }
+
+    /* ------------------------------------------------------ capa estática */
+
+    function paintWorld(sun) {
+      var cx = focus.x;
+      var cy = focus.y;
+      var r = projection.scale();
+
+      wctx.setTransform(view.dpr, 0, 0, view.dpr, 0, 0);
+      wctx.clearRect(0, 0, view.w, view.h);
+
+      // Con WebGL el planeta ya está pintado debajo, con la fotografía; aquí
+      // sólo van las líneas. Sin WebGL, este lienzo dibuja también la esfera.
+      if (!earth) paintVectorGlobe(cx, cy, r);
 
       wctx.save();
       wctx.beginPath();
       wctx.arc(cx, cy, r, 0, 2 * Math.PI);
       wctx.clip();
 
-      wctx.strokeStyle = 'rgba(126,158,199,0.065)';
-      wctx.lineWidth = 0.6;
-      wctx.beginPath();
-      draw(graticule);
-      wctx.stroke();
+      // La retícula sólo tiene sentido sobre el planeta de repuesto: sobre la
+      // fotografía son rayas pintadas encima de la Tierra.
+      if (!earth) {
+        wctx.strokeStyle = 'rgba(126,158,199,0.065)';
+        wctx.lineWidth = 0.6;
+        wctx.beginPath();
+        draw(graticule);
+        wctx.stroke();
+      }
 
-      wctx.fillStyle = '#1b222c';
-      wctx.strokeStyle = 'rgba(138,168,206,0.20)';
-      wctx.lineWidth = 0.6;
-      wctx.beginPath();
-      draw(DATA.map.land);
-      wctx.fill();
-      wctx.stroke();
+      if (!earth) {
+        wctx.fillStyle = '#1b222c';
+        wctx.beginPath();
+        draw(DATA.map.land);
+        wctx.fill();
+      }
 
-      wctx.strokeStyle = 'rgba(138,168,206,0.13)';
+      // Sobre la fotografía las fronteras son lo único que la foto no trae, y
+      // es lo que deja leer dónde acaba un país.
+      wctx.strokeStyle = earth ? 'rgba(180,206,236,0.30)' : 'rgba(138,168,206,0.16)';
       wctx.lineWidth = 0.5;
       wctx.beginPath();
       draw(DATA.map.borders);
@@ -1233,7 +1479,7 @@
 
       // La red: todas las rutas activas del mundo, apenas insinuadas. Son el
       // fondo sobre el que destaca el vuelo elegido, no el protagonista.
-      wctx.strokeStyle = 'rgba(255,144,54,0.085)';
+      wctx.strokeStyle = earth ? 'rgba(255,170,96,0.16)' : 'rgba(255,144,54,0.085)';
       wctx.lineWidth = 0.55;
       wctx.beginPath();
       DATA.routes.forEach(function (route) {
@@ -1248,7 +1494,7 @@
       });
       wctx.stroke();
 
-      paintCityLights();
+      paintCityLights(sun);
       wctx.restore();
     }
 
@@ -1256,7 +1502,7 @@
      * Los aeropuertos son las luces de las ciudades. El tamaño sale del peso de
      * mercado, así que el planeta se ilumina donde de verdad hay tráfico.
      */
-    function paintCityLights() {
+    function paintCityLights(sun) {
       var zoomBoost = 0.72 + cam.zoom * 0.14;
       // De lejos sólo se ven las capitales; al acercarse van encendiéndose las
       // demás. Dibujarlas todas desde el principio convierte Europa en una
@@ -1270,12 +1516,21 @@
         if (!p) return;
         var r = (0.5 + Math.sqrt(a.weight) / 17) * zoomBoost;
 
-        wctx.fillStyle = 'rgba(255,160,80,0.13)';
+        // Una luz de ciudad se ve de noche. De día el aeropuerto sigue ahí,
+        // pero apagado, como en la fotografía que tiene debajo.
+        var night = 1 - daylight(a.lon, a.lat, sun);
+        var glow = 0.05 + night * 0.16;
+        var core = 0.42 + night * 0.5;
+
+        wctx.fillStyle = 'rgba(255,160,80,' + glow.toFixed(3) + ')';
         wctx.beginPath();
         wctx.arc(p[0], p[1], r * 3.4, 0, 2 * Math.PI);
         wctx.fill();
 
-        wctx.fillStyle = a.size >= 4 ? '#ffdcb0' : 'rgba(255,172,102,0.8)';
+        wctx.fillStyle =
+          a.size >= 4
+            ? 'rgba(255,220,176,' + Math.min(1, core + 0.2).toFixed(3) + ')'
+            : 'rgba(255,172,102,' + core.toFixed(3) + ')';
         wctx.beginPath();
         wctx.arc(p[0], p[1], r, 0, 2 * Math.PI);
         wctx.fill();
@@ -1302,14 +1557,20 @@
         ctx.shadowColor = glow;
         ctx.shadowBlur = 14;
       }
-      ctx.fillStyle = fill;
       ctx.beginPath();
       ctx.moveTo(size, 0);
       ctx.lineTo(-size * 0.75, size * 0.62);
       ctx.lineTo(-size * 0.4, 0);
       ctx.lineTo(-size * 0.75, -size * 0.62);
       ctx.closePath();
+      ctx.fillStyle = fill;
       ctx.fill();
+      // Un filo oscuro alrededor: sobre el mar se leen solos, pero sobre el
+      // verde de Europa o la arena del Sáhara se perdían.
+      ctx.shadowBlur = 0;
+      ctx.lineWidth = 0.7;
+      ctx.strokeStyle = 'rgba(8,10,14,0.55)';
+      ctx.stroke();
       ctx.restore();
     }
 
@@ -1662,7 +1923,7 @@
       view.h = window.innerHeight;
       view.dpr = Math.min(2, window.devicePixelRatio || 1);
 
-      [globe, starsCanvas, world].forEach(function (c) {
+      [globe, starsCanvas, earthCanvas, world].forEach(function (c) {
         c.width = Math.round(view.w * view.dpr);
         c.height = Math.round(view.h * view.dpr);
         if (c !== world) {
@@ -2208,17 +2469,23 @@
       paintHero(now, selected, state);
       paintScrub(now, selected, state);
 
+      // El terminador entra en la clave: cuando el Sol se mueve lo bastante
+      // como para que se note, la capa estática se repinta sola. Un minuto de
+      // mundo son quince centésimas de grado de longitud subsolar.
+      var sun = sunDirection(now);
       var key = [
         Math.round(cam.lon * 20),
         Math.round(cam.lat * 20),
         Math.round(cam.zoom * 60),
         view.w,
         view.h,
+        Math.round(now / 60000),
       ].join('|');
 
       if (key !== worldKey) {
         worldKey = key;
-        paintWorld();
+        paintEarth(sun);
+        paintWorld(sun);
         needsPaint = true;
       }
 
@@ -2265,6 +2532,7 @@
     window.addEventListener('resize', resize);
     if (window.visualViewport) window.visualViewport.addEventListener('resize', resize);
 
+    earth = initEarth();
     resize();
 
     var initial = railItems(flightsNow(Date.now()), Date.now());

@@ -1,4 +1,4 @@
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { copyFile, mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -26,6 +26,15 @@ const OUT = path.join(OUT_DIR, 'index.html');
 
 // El orden importa: d3-geo espera encontrar ya en `d3` lo que toma de d3-array.
 const VENDOR = ['vendor/d3-array-subset.js', 'vendor/d3-geo.min.js'];
+
+/**
+ * Ficheros que se copian tal cual junto a la página.
+ *
+ * La fotografía de la Tierra no se incrusta en el HTML: en base64 engordaría
+ * 430 KB el documento y habría que volver a descargarla en cada visita. Como
+ * fichero aparte, el navegador la cachea.
+ */
+const ASSETS = ['textures/earth-bmng-2048.jpg'];
 
 /**
  * Lo único que puede romper un `<script>` o un `<script type="application/json">`
@@ -67,9 +76,16 @@ async function main() {
   await mkdir(OUT_DIR, { recursive: true });
   await writeFile(OUT, html);
 
+  await Promise.all(
+    ASSETS.map((asset) =>
+      copyFile(path.join(PREVIEW, asset), path.join(OUT_DIR, path.basename(asset))),
+    ),
+  );
+
   console.log(
     `Vista previa construida: ${(html.length / 1024).toFixed(0)} KB → ${path.relative(ROOT, OUT)}`,
   );
+  console.log(`Ficheros junto a ella: ${ASSETS.map((a) => path.basename(a)).join(', ')}`);
 }
 
 main().catch(
