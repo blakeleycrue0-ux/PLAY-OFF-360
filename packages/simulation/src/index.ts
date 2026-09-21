@@ -15,6 +15,7 @@ export {
   type ScenarioResult,
   type BuildInput,
   buildScenario,
+  toUtcMinute,
 } from './harness/world-builder.js';
 export {
   type SimulateOptions,

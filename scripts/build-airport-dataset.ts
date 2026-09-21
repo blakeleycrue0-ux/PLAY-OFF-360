@@ -5,6 +5,7 @@ import { parseCsvRecords } from './lib/csv.js';
 import {
   NORMALISER_VERSION,
   SCHENGEN_COUNTRIES,
+  displayCity,
   feesFor,
   provisionalBusinessIndex,
   provisionalLeisureIndex,
@@ -151,7 +152,9 @@ function normalise(raw: RawAirport): Record<string, unknown> {
     iata: raw.iata,
     icao: raw.icao,
     name: raw.name,
-    city: raw.city,
+    // Nombre corto para enseñar; el índice de negocio sigue leyendo el
+    // municipio de la fuente a través de `raw`.
+    city: displayCity(raw.city),
     country: raw.country,
     latitude: Math.round(raw.latitude * 1e6) / 1e6,
     longitude: Math.round(raw.longitude * 1e6) / 1e6,

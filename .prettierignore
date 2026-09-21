@@ -4,3 +4,7 @@ pnpm-lock.yaml
 data/
 coverage/
 *.md
+
+# Copia literal de un paquete publicado: tiene que quedarse byte a byte igual
+# que su origen para poder compararla con él.
+apps/web/preview/vendor/d3-geo.min.js

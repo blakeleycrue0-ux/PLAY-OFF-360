@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { parseCsv, parseCsvRecords } from './csv.js';
 import {
   SCHENGEN_COUNTRIES,
+  displayCity,
   feesFor,
   provisionalBusinessIndex,
   provisionalLeisureIndex,
@@ -135,5 +136,34 @@ describe('normalización de aeropuertos', () => {
     expect(SCHENGEN_COUNTRIES.has('DE')).toBe(true);
     expect(SCHENGEN_COUNTRIES.has('GB')).toBe(false);
     expect(SCHENGEN_COUNTRIES.has('TR')).toBe(false);
+  });
+});
+
+describe('nombre corto de la ciudad', () => {
+  it('se queda con la ciudad y tira la dirección administrativa', () => {
+    expect(displayCity("Paris (Roissy-en-France, Val-d'Oise)")).toBe('Paris');
+    expect(displayCity('Newcastle upon Tyne, Tyne and Wear')).toBe('Newcastle upon Tyne');
+    expect(displayCity('Frankfurt am Main (Lautzenhausen)')).toBe('Frankfurt am Main');
+    expect(displayCity('Kristiansand(Kjevik)')).toBe('Kristiansand');
+    expect(displayCity('Montpellier/Méditerranée')).toBe('Montpellier');
+  });
+
+  it('deja intacto lo que ya es un nombre de ciudad', () => {
+    expect(displayCity('Santiago de Compostela')).toBe('Santiago de Compostela');
+    expect(displayCity('Klagenfurt am Wörthersee')).toBe('Klagenfurt am Wörthersee');
+  });
+
+  it('prefiere el original a devolver una cadena vacía', () => {
+    expect(displayCity('(Sin municipio)')).toBe('(Sin municipio)');
+  });
+
+  it('no cambia la detección de hubs de negocio, que mira el municipio original', () => {
+    // El índice se calcula sobre el municipio de la fuente: recortarlo aquí no
+    // debe mover el número.
+    const spata = airport({ city: 'Spata-Artemida' });
+    const paris = airport({ city: "Paris (Roissy-en-France, Val-d'Oise)" });
+    expect(provisionalBusinessIndex(spata)).toBeGreaterThan(0.5);
+    expect(provisionalBusinessIndex(paris)).toBeGreaterThan(0.5);
+    expect(displayCity('Spata-Artemida')).toBe('Spata-Artemida');
   });
 });

@@ -1,15 +1,18 @@
 import { writeFile } from 'node:fs/promises';
 import path from 'node:path';
-import { geoMercator, geoPath } from 'd3-geo';
 import { feature, mesh } from 'topojson-client';
 import type { GeometryCollection, Topology } from 'topojson-specification';
 import land110m from 'world-atlas/land-110m.json' with { type: 'json' };
 import countries110m from 'world-atlas/countries-110m.json' with { type: 'json' };
-import { fitProjection, type MapBounds } from './lib/projection.js';
 
 /**
- * Genera la geometría del mapa como dos rutas SVG ya proyectadas: la masa de
- * tierra y las fronteras interiores.
+ * Genera la geometría del mundo en coordenadas geográficas: la masa de tierra y
+ * las fronteras interiores, en grados, sin proyectar.
+ *
+ * Antes esto salía ya proyectado a rutas SVG de una Mercator europea. Eso servía
+ * para un mapa plano y fijo, y sólo para ése: un globo que se gira no puede usar
+ * puntos proyectados, porque la proyección cambia en cada fotograma. Las
+ * coordenadas viajan en crudo y quien proyecta es el cliente.
  *
  * El mapa no usa teselas de un servidor externo. Se dibuja como vector por tres
  * razones, y ninguna es estética: no depende de que un proveedor esté
@@ -17,54 +20,104 @@ import { fitProjection, type MapBounds } from './lib/projection.js';
  * teselas —lo que importa en móvil—, y permite el aspecto que queremos sin
  * pelearse con el estilo de nadie.
  *
- * Tierra y fronteras van por separado a propósito. Rellenar país por país
- * parece equivalente y no lo es: al recortar el encuadre, los anillos de los
- * países que se salen cambian de sentido y el relleno deja agujeros —Escandinavia
- * entera desaparecía—. Una sola masa de tierra rellena no puede tener ese
- * problema, y las fronteras, que sólo se trazan, tampoco.
+ * Tierra y fronteras van por separado a propósito: la tierra se rellena y las
+ * fronteras sólo se trazan, así que un país no puede pintarse encima del mar de
+ * su vecino.
  */
 
 const ROOT = path.resolve(import.meta.dirname, '..');
-const OUT_FILE = path.join(ROOT, 'data', 'map-europe.json');
-
-// Encuadre del mundo del MVP: Europa con Canarias y el Egeo dentro.
-const BOUNDS: MapBounds = { west: -32, east: 46, south: 26, north: 71 };
-
-// El alto lo fija la proyección, no un número elegido a ojo: en una proyección
-// conforme, ancho y alto están ligados por la escala.
-const PROJECTION = fitProjection(BOUNDS, 1600);
-const VIEW = { width: PROJECTION.width, height: PROJECTION.height };
-
-const MARGIN = 60;
+const OUT_FILE = path.join(ROOT, 'data', 'world-map.json');
 
 /**
- * Redondea las coordenadas de una ruta a un decimal. A esta escala la décima de
- * píxel no se ve y recorta el fichero a una fracción de su tamaño.
+ * Decimales que se conservan de cada coordenada.
+ *
+ * Dos décimas de grado son unos 2 km, por debajo del detalle real que trae la
+ * fuente a escala 1:110M, y bastante más fino que un píxel con el globo al
+ * máximo de acercamiento. Redondear aquí recorta el fichero a la mitad sin que
+ * se note en pantalla.
  */
-function roundPath(d: string): string {
-  return d.replace(/-?\d+\.\d+/g, (match) => String(Math.round(Number(match) * 10) / 10));
+const DECIMALS = 2;
+const FACTOR = 10 ** DECIMALS;
+
+/**
+ * Un punto tal y como lo entrega GeoJSON: una lista de números, no una tupla.
+ * La fuente puede traer una tercera coordenada, y podría traer menos de dos, así
+ * que se comprueba en vez de darlo por hecho con una aserción de tipo.
+ */
+type Point = readonly number[];
+
+function roundPoint(point: Point): [number, number] {
+  const longitude = point[0];
+  const latitude = point[1];
+  if (longitude === undefined || latitude === undefined) {
+    throw new Error('La fuente trae un punto sin longitud o sin latitud.');
+  }
+  return [Math.round(longitude * FACTOR) / FACTOR, Math.round(latitude * FACTOR) / FACTOR];
+}
+
+/**
+ * Redondea una secuencia de puntos y descarta los que el redondeo ha dejado
+ * repetidos. Sin este segundo paso el ahorro sería sólo de dígitos, no de
+ * puntos, que es donde está el peso.
+ */
+function roundRing(ring: readonly Point[], closed: boolean): [number, number][] {
+  const out: [number, number][] = [];
+
+  for (const point of ring) {
+    const rounded = roundPoint(point);
+    const previous = out[out.length - 1];
+    if (previous?.[0] === rounded[0] && previous?.[1] === rounded[1]) continue;
+    out.push(rounded);
+  }
+
+  // Un anillo tiene que cerrar: si el redondeo separó el último punto del
+  // primero, se fuerza el cierre en vez de dejar un polígono abierto.
+  const first = out[0];
+  const last = out[out.length - 1];
+  if (closed && first !== undefined && last?.[0] !== undefined) {
+    if (first[0] !== last[0] || first[1] !== last[1]) out.push([first[0], first[1]]);
+  }
+
+  return out;
+}
+
+/** Un anillo con menos de cuatro puntos no encierra área: se descarta entero. */
+function roundPolygon(polygon: readonly (readonly Point[])[]): [number, number][][] {
+  return polygon.map((ring) => roundRing(ring, true)).filter((ring) => ring.length >= 4);
+}
+
+/**
+ * Aplana la tierra a una lista de polígonos.
+ *
+ * topojson devuelve una colección de piezas que pueden ser Polygon o
+ * MultiPolygon según cuántos anillos tenga cada una; al globo le da igual la
+ * diferencia, así que se normalizan a una sola forma.
+ */
+function collectPolygons(collection: ReturnType<typeof feature>): (readonly Point[])[][] {
+  const features = collection.type === 'FeatureCollection' ? collection.features : [collection];
+  const polygons: (readonly Point[])[][] = [];
+
+  for (const item of features) {
+    const geometry = item.geometry;
+    if (geometry.type === 'Polygon') {
+      polygons.push(geometry.coordinates);
+    } else if (geometry.type === 'MultiPolygon') {
+      for (const polygon of geometry.coordinates) polygons.push(polygon);
+    }
+  }
+
+  return polygons;
+}
+
+function countPoints(geometry: readonly unknown[]): number {
+  return JSON.stringify(geometry).split('],[').length;
 }
 
 async function main(): Promise<void> {
-  const projection = geoMercator()
-    .scale(PROJECTION.scale)
-    .translate([PROJECTION.translateX, PROJECTION.translateY])
-    .center([0, 0])
-    .rotate([0, 0, 0])
-    // Recorte al encuadre: sin esto, un país que envuelve el antimeridiano se
-    // proyecta como una banda de miles de unidades de ancho.
-    .clipExtent([
-      [-MARGIN, -MARGIN],
-      [VIEW.width + MARGIN, VIEW.height + MARGIN],
-    ])
-    .precision(0.3);
-
-  const toPath = geoPath(projection);
-
   const landTopology = land110m as unknown as Topology;
   const landObject = landTopology.objects['land'];
   if (landObject === undefined) throw new Error('El topology de tierra no trae el objeto "land".');
-  const landFeature = feature(landTopology, landObject);
+  const landPolygons = collectPolygons(feature(landTopology, landObject));
 
   const countryTopology = countries110m as unknown as Topology;
   const countryObject = countryTopology.objects['countries'];
@@ -73,31 +126,38 @@ async function main(): Promise<void> {
   }
   const borders = mesh(countryTopology, countryObject as GeometryCollection, (a, b) => a !== b);
 
+  const land = landPolygons
+    .map((polygon) => roundPolygon(polygon))
+    .filter((polygon) => polygon.length > 0);
+
+  const borderLines = borders.coordinates
+    .map((line) => roundRing(line, false))
+    .filter((line) => line.length >= 2);
+
   const dataset = {
-    $schema: 'https://airline-sim.invalid/schemas/map-v1.json',
+    $schema: 'https://airline-sim.invalid/schemas/world-map-v2.json',
     provenance: {
       source: 'Natural Earth vía el paquete world-atlas (land-110m y countries-110m)',
       license: 'Dominio público',
-      projection: 'Mercator ajustada al encuadre europeo',
+      coordinates: 'WGS84 en grados decimales, sin proyectar',
+      decimals: DECIMALS,
       builtAt: new Date().toISOString(),
     },
-    view: VIEW,
-    bounds: BOUNDS,
-    // Parámetros de la proyección, para que el cliente pueda situar un punto
-    // —un aeropuerto, un avión en movimiento— sin volver a preguntar.
-    projection: PROJECTION,
-    land: roundPath(toPath(landFeature) ?? ''),
-    borders: roundPath(toPath(borders) ?? ''),
+    // Geometrías GeoJSON listas para dibujar con cualquier proyección.
+    land: { type: 'MultiPolygon' as const, coordinates: land },
+    borders: { type: 'MultiLineString' as const, coordinates: borderLines },
   };
 
   const json = `${JSON.stringify(dataset)}\n`;
   await writeFile(OUT_FILE, json);
 
   console.log(
-    `Mapa ${VIEW.width}×${VIEW.height} · tierra ${(dataset.land.length / 1024).toFixed(0)} KB · ` +
-      `fronteras ${(dataset.borders.length / 1024).toFixed(0)} KB`,
+    `Tierra: ${land.length} polígonos, ${countPoints(land)} puntos · ` +
+      `fronteras: ${borderLines.length} líneas, ${countPoints(borderLines)} puntos`,
   );
-  console.log(`Escrito en ${path.relative(ROOT, OUT_FILE)}`);
+  console.log(
+    `Escrito en ${path.relative(ROOT, OUT_FILE)} (${(json.length / 1024).toFixed(0)} KB)`,
+  );
 }
 
 main().catch((error: unknown) => {
