@@ -1,44 +1,45 @@
-<title>Airline World</title>
+<title>Torre de Control</title>
+<meta charset="utf-8" />
+<!--
+  Sin esto el navegador móvil maqueta la página a 980 px y luego la encoge:
+  todo sale diminuto y ningún ajuste de CSS lo arregla. viewport-fit=cover deja
+  que el globo llegue hasta el borde, y las barras del sistema se esquivan con
+  env(safe-area-inset-*).
+-->
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#08080a" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link
   rel="stylesheet"
-  href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@400;500;600&family=Barlow:wght@400;500&family=IBM+Plex+Mono:wght@400;500;600&display=swap"
+  href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap"
 />
 
 <style>
   /*
-   * Consola de operaciones de una aerolínea.
-   *
-   * El diseño se compromete con un único mundo visual: una sala de control de
-   * noche. Fondo casi negro, tierra apenas insinuada, y un solo acento ámbar
-   * reservado a lo que está vivo —los aviones en el aire—. Todo lo demás es
-   * gris frío para que el ámbar signifique algo.
+   * El mundo del juego es de noche y sólo de noche: un planeta oscuro con las
+   * ciudades encendidas. No es un tema claro al que le falte el oscuro, es una
+   * decisión —por eso no hay bloques de prefers-color-scheme— y por eso cada
+   * color se pinta explícito, para que la página no herede el fondo de nadie.
    */
   :root {
-    --void: #08090b;
-    --panel: #0e1116;
-    --panel-raised: #12161c;
-    --land: #161a21;
-    --land-edge: #232932;
-    --hairline: #1e242d;
-    --hairline-strong: #2b323d;
+    --void: #08080a;
+    --panel: #101116;
+    --panel-hi: #171922;
+    --line: #23252e;
+    --ink: #ffffff;
+    --dim: #9ea1aa;
+    --faint: #5b5e68;
+    --amber: #ff9036;
+    --amber-dim: rgba(255, 144, 54, 0.16);
+    --green: #4ad991;
+    --red: #ff5d5d;
 
-    --ink: #e7e9ec;
-    --ink-dim: #8a93a2;
-    --ink-faint: #59616f;
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
 
-    --signal: #e8b23a;
-    --signal-dim: #8a6b24;
-    --gain: #4fae84;
-    --loss: #d4614f;
-    --route: #222c3a;
-
-    --mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace;
-    --ui: 'Barlow Semi Condensed', 'Barlow', system-ui, sans-serif;
-    --body: 'Barlow', system-ui, sans-serif;
-
-    color-scheme: dark;
+    --gutter: 18px;
+    --radius: 18px;
   }
 
   * {
@@ -54,843 +55,973 @@
     margin: 0;
     background: var(--void);
     color: var(--ink);
-    font-family: var(--body);
-    font-size: 14px;
+    font-family: Archivo, 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    font-size: 15px;
+    line-height: 1.4;
     -webkit-font-smoothing: antialiased;
+    overflow: hidden;
+    overscroll-behavior: none;
   }
 
-  .shell {
-    display: grid;
-    grid-template-rows: auto 1fr;
+  button {
+    font: inherit;
+    color: inherit;
+    border: 0;
+    background: none;
+    padding: 0;
+    cursor: pointer;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--amber);
+    outline-offset: 3px;
+  }
+
+  .mono {
+    font-family: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ---------------------------------------------------------------- escena */
+
+  #stars,
+  #globe {
+    position: fixed;
+    inset: 0;
+    width: 100%;
     height: 100%;
-    min-height: 100%;
+    display: block;
   }
 
-  /* ─── Barra superior ─────────────────────────────────────────────── */
+  #stars {
+    z-index: 0;
+  }
+
+  #globe {
+    z-index: 1;
+    /*
+     * Esto es lo que arregla el zoom. Sin touch-action:none el navegador se
+     * queda el pellizco y el arrastre para hacer su propio zoom de página, y el
+     * mapa responde a lo que sobra: rígido, a saltos, imposible de acercar.
+     */
+    touch-action: none;
+  }
+
+  /* Chapas de aeropuerto: DOM, no canvas, para que el texto quede nítido y se
+     puedan tocar con el dedo sin cazar píxeles. */
+  .scrim {
+    position: fixed;
+    left: 0;
+    right: 0;
+    z-index: 2;
+    pointer-events: none;
+  }
+
+  .scrim.top {
+    top: 0;
+    height: 42%;
+    background: linear-gradient(
+      to bottom,
+      rgba(8, 8, 10, 0.88) 0%,
+      rgba(8, 8, 10, 0.55) 45%,
+      rgba(8, 8, 10, 0) 100%
+    );
+  }
+
+  .scrim.bottom {
+    bottom: 0;
+    height: 38%;
+    background: linear-gradient(
+      to top,
+      rgba(8, 8, 10, 0.92) 0%,
+      rgba(8, 8, 10, 0.62) 42%,
+      rgba(8, 8, 10, 0) 100%
+    );
+  }
+
+  #chips {
+    position: fixed;
+    inset: 0;
+    z-index: 3;
+    pointer-events: none;
+  }
+
+  .chip {
+    position: absolute;
+    top: 0;
+    left: 0;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 10px 5px 7px;
+    border-radius: 999px;
+    background: rgba(12, 13, 17, 0.72);
+    border: 1px solid rgba(255, 144, 54, 0.4);
+    color: var(--amber);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    white-space: nowrap;
+    backdrop-filter: blur(8px);
+    pointer-events: auto;
+    transition: opacity 0.18s ease;
+  }
+
+  .chip svg {
+    width: 11px;
+    height: 11px;
+    flex: none;
+  }
+
+  .chip.is-target {
+    background: var(--amber);
+    border-color: var(--amber);
+    color: #1a0d02;
+    box-shadow: 0 6px 22px rgba(255, 144, 54, 0.45);
+  }
+
+  .chip.is-origin {
+    background: rgba(255, 255, 255, 0.92);
+    border-color: rgba(255, 255, 255, 0.92);
+    color: #101116;
+  }
+
+  /* --------------------------------------------------------------- chrome */
+
+  .app {
+    position: fixed;
+    inset: 0;
+    z-index: 4;
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    padding: var(--safe-top) 0 var(--safe-bottom);
+    pointer-events: none;
+  }
+
+  .app > * {
+    min-width: 0;
+  }
+
+  /* Barra superior ------------------------------------------------------- */
 
   .topbar {
     display: flex;
     align-items: center;
-    gap: 22px;
-    padding: 0 16px;
-    height: 52px;
-    border-bottom: 1px solid var(--hairline);
-    background: var(--panel);
-    flex-wrap: wrap;
+    gap: 10px;
+    padding: 12px var(--gutter) 0;
   }
 
-  .brand {
+  .iconbtn {
+    width: 42px;
+    height: 42px;
+    flex: none;
+    display: grid;
+    place-items: center;
+    border-radius: 999px;
+    background: rgba(18, 19, 25, 0.66);
+    border: 1px solid var(--line);
+    backdrop-filter: blur(10px);
+    pointer-events: auto;
+    transition:
+      background 0.15s ease,
+      transform 0.12s ease;
+  }
+
+  .iconbtn:active {
+    transform: scale(0.93);
+    background: rgba(40, 42, 52, 0.8);
+  }
+
+  .iconbtn svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .topbar .spacer {
+    flex: 1;
+  }
+
+  .live {
     display: flex;
-    align-items: baseline;
-    gap: 9px;
-    margin-right: auto;
-  }
-
-  .brand b {
-    font-family: var(--ui);
-    font-weight: 600;
-    font-size: 16px;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-  }
-
-  .brand span {
-    font-family: var(--mono);
+    align-items: center;
+    gap: 7px;
+    height: 42px;
+    padding: 0 14px;
+    border-radius: 999px;
+    background: rgba(18, 19, 25, 0.66);
+    border: 1px solid var(--line);
+    backdrop-filter: blur(10px);
     font-size: 11px;
-    color: var(--ink-faint);
-    letter-spacing: 0.06em;
-  }
-
-  /* Decir qué se está mirando importa: esto es un día grabado, no tráfico
-     real, y la página no debe insinuar otra cosa. */
-  .replay {
-    border: 1px solid var(--hairline-strong);
-    padding: 2px 7px;
-    border-radius: 2px;
-    white-space: nowrap;
-  }
-
-  .stat {
-    display: flex;
-    flex-direction: column;
-    gap: 1px;
-    min-width: 62px;
-  }
-
-  .stat .k {
-    font-family: var(--ui);
-    font-size: 10px;
-    letter-spacing: 0.13em;
+    letter-spacing: 0.1em;
     text-transform: uppercase;
-    color: var(--ink-faint);
+    color: var(--dim);
   }
 
-  .stat .v {
-    font-family: var(--mono);
-    font-size: 15px;
+  .live b {
+    color: var(--ink);
+    font-weight: 600;
+  }
+
+  .dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 10px var(--green);
+    animation: pulse 2.4s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    50% {
+      opacity: 0.35;
+    }
+  }
+
+  /* Héroe ---------------------------------------------------------------- */
+
+  .hero {
+    align-self: start;
+    padding: 20px var(--gutter) 0;
+    max-width: 520px;
+  }
+
+  .greeting {
+    margin: 0;
+    font-size: 13px;
     font-weight: 500;
-    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.02em;
+    color: var(--dim);
   }
 
-  .stat .v.live {
-    color: var(--signal);
+  .destination {
+    margin: 2px 0 0;
+    font-size: clamp(38px, 12vw, 62px);
+    font-weight: 800;
+    letter-spacing: -0.035em;
+    line-height: 0.95;
+    text-wrap: balance;
+    text-shadow: 0 6px 34px rgba(0, 0, 0, 0.7);
   }
 
-  .clock {
-    font-family: var(--mono);
-    font-size: 15px;
-    font-variant-numeric: tabular-nums;
+  .subline {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+    font-size: 12px;
+    color: var(--dim);
+  }
+
+  .tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 9px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    background: rgba(16, 17, 22, 0.62);
+    backdrop-filter: blur(8px);
+    font-size: 11px;
     letter-spacing: 0.04em;
   }
 
-  .clock::after {
-    content: ' UTC';
-    font-size: 10px;
-    color: var(--ink-faint);
-    letter-spacing: 0.1em;
+  .tag.amber {
+    color: var(--amber);
+    border-color: rgba(255, 144, 54, 0.35);
+    background: var(--amber-dim);
   }
 
-  /* ─── Rejilla principal ──────────────────────────────────────────── */
+  /* Pie ------------------------------------------------------------------ */
 
-  .main {
-    display: grid;
-    grid-template-columns: 236px 1fr 296px;
-    min-height: 0;
-  }
-
-  .rail,
-  .inspector {
-    border-color: var(--hairline);
-    background: var(--panel);
-    overflow-y: auto;
-    min-height: 0;
-  }
-
-  .rail {
-    border-right: 1px solid var(--hairline);
-  }
-
-  .inspector {
-    border-left: 1px solid var(--hairline);
-  }
-
-  .section {
-    border-bottom: 1px solid var(--hairline);
-    padding: 14px 14px 16px;
-  }
-
-  .section h2 {
-    margin: 0 0 12px;
-    font-family: var(--ui);
-    font-size: 10px;
-    font-weight: 600;
-    letter-spacing: 0.16em;
-    text-transform: uppercase;
-    color: var(--ink-faint);
-  }
-
-  /* ─── Identidad de la aerolínea ──────────────────────────────────── */
-
-  .carrier {
+  .foot {
+    align-self: end;
     display: flex;
-    gap: 10px;
-    align-items: center;
+    flex-direction: column;
+    gap: 14px;
+    padding: 0 0 14px;
   }
 
-  .tail {
-    width: 38px;
-    height: 38px;
-    flex: none;
-    border-radius: 3px;
-    display: grid;
-    place-items: center;
-    font-family: var(--ui);
+  /* Regla de progreso ---------------------------------------------------- */
+
+  .scrub {
+    padding: 0 var(--gutter);
+  }
+
+  .scrub-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+    font-size: 11px;
+    color: var(--faint);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .scrub-head b {
+    color: var(--ink);
     font-weight: 600;
     font-size: 13px;
-    letter-spacing: 0.06em;
-    color: var(--void);
-    background: var(--signal);
+    letter-spacing: 0.02em;
+    text-transform: none;
   }
 
-  .carrier-name {
-    font-family: var(--ui);
-    font-size: 15px;
-    font-weight: 500;
-    line-height: 1.15;
+  .ruler {
+    position: relative;
+    height: 30px;
+    margin-top: 6px;
+    -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+    mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
   }
 
-  .carrier-sub {
-    font-family: var(--mono);
-    font-size: 10.5px;
-    color: var(--ink-faint);
-    letter-spacing: 0.05em;
-    margin-top: 2px;
+  .ticks {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
   }
 
-  .kpis {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1px;
-    background: var(--hairline);
-    border: 1px solid var(--hairline);
-    margin-top: 14px;
+  .ticks i {
+    width: 1.2px;
+    height: 8px;
+    border-radius: 1px;
+    background: rgba(255, 255, 255, 0.22);
   }
 
-  .kpi {
-    background: var(--panel);
-    padding: 9px 10px;
+  .ticks i.tall {
+    height: 15px;
+    background: rgba(255, 255, 255, 0.4);
   }
 
-  .kpi .k {
-    font-family: var(--ui);
-    font-size: 9.5px;
-    letter-spacing: 0.13em;
-    text-transform: uppercase;
-    color: var(--ink-faint);
+  .ticks i.done {
+    background: var(--amber);
   }
 
-  .kpi .v {
-    font-family: var(--mono);
-    font-size: 16px;
-    font-weight: 500;
-    font-variant-numeric: tabular-nums;
-    margin-top: 2px;
+  .ticks i.tall.done {
+    background: var(--amber);
   }
 
-  .kpi .v small {
-    font-size: 10px;
-    color: var(--ink-faint);
-    margin-left: 2px;
+  .cursor {
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    width: 2px;
+    height: 24px;
+    border-radius: 2px;
+    background: var(--ink);
+    box-shadow: 0 0 14px rgba(255, 255, 255, 0.7);
+    transform: translateX(-50%);
+    transition: left 0.4s linear;
   }
 
-  .gain {
-    color: var(--gain);
+  .cursor::before {
+    content: '';
+    position: absolute;
+    top: -5px;
+    left: 50%;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--ink);
+    transform: translateX(-50%);
   }
 
-  .loss {
-    color: var(--loss);
+  /* Carrusel ------------------------------------------------------------- */
+
+  .rail {
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    padding: 2px var(--gutter) 4px;
+    scrollbar-width: none;
+    pointer-events: auto;
+    -webkit-overflow-scrolling: touch;
   }
 
-  /* ─── Tabla de clasificación ─────────────────────────────────────── */
-
-  .board {
-    width: 100%;
-    border-collapse: collapse;
-    font-family: var(--mono);
-    font-size: 11px;
-    font-variant-numeric: tabular-nums;
+  .rail::-webkit-scrollbar {
+    display: none;
   }
 
-  .board th {
-    font-family: var(--ui);
-    font-size: 9.5px;
-    font-weight: 600;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: var(--ink-faint);
-    text-align: right;
-    padding: 0 0 7px;
-  }
-
-  .board {
-    table-layout: fixed;
-  }
-
-  .board th:first-child,
-  .board td:first-child {
+  .card {
+    flex: 0 0 auto;
+    width: 210px;
+    scroll-snap-align: start;
     text-align: left;
-    /* Una fila por compañía: un nombre largo se recorta, no parte la tabla. */
+    padding: 12px 13px;
+    border-radius: var(--radius);
+    background: rgba(16, 17, 22, 0.78);
+    border: 1px solid var(--line);
+    backdrop-filter: blur(14px);
+    transition:
+      transform 0.16s ease,
+      background 0.2s ease;
+  }
+
+  .card:active {
+    transform: scale(0.97);
+  }
+
+  .card.on {
+    background: var(--ink);
+    border-color: var(--ink);
+    color: #0b0c10;
+  }
+
+  .card-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    color: var(--faint);
+  }
+
+  .card.on .card-top {
+    color: rgba(11, 12, 16, 0.55);
+  }
+
+  .card-city {
+    margin-top: 7px;
+    font-size: 19px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
   }
 
-  .board th:nth-child(2),
-  .board td:nth-child(2) {
-    width: 42px;
+  .card-sub {
+    margin-top: 2px;
+    font-size: 11px;
+    color: var(--dim);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
-  .board th:nth-child(3),
-  .board td:nth-child(3) {
-    width: 58px;
+  .card.on .card-sub {
+    color: rgba(11, 12, 16, 0.62);
   }
 
-  .board td {
-    padding: 5px 0;
-    text-align: right;
-    border-top: 1px solid var(--hairline);
-    color: var(--ink-dim);
-  }
-
-  .board tbody tr {
-    cursor: pointer;
-  }
-
-  .board tbody tr:hover td {
-    color: var(--ink);
-    background: var(--panel-raised);
-  }
-
-  .board tr.on td {
-    color: var(--ink);
-  }
-
-  .board tr.on td:first-child {
-    box-shadow: inset 2px 0 0 var(--signal);
-  }
-
-  .board .hub {
-    color: var(--ink-faint);
-    padding-left: 6px;
-  }
-
-  /* ─── Mapa ───────────────────────────────────────────────────────── */
-
-  .stage {
-    position: relative;
-    min-height: 0;
-    background: var(--void);
+  .bar {
+    margin-top: 10px;
+    height: 3px;
+    border-radius: 2px;
+    background: rgba(255, 255, 255, 0.12);
     overflow: hidden;
   }
 
-  #map {
+  .card.on .bar {
+    background: rgba(11, 12, 16, 0.14);
+  }
+
+  .bar span {
     display: block;
-    width: 100%;
     height: 100%;
+    border-radius: 2px;
+    background: var(--amber);
+  }
+
+  /* Botón principal ------------------------------------------------------ */
+
+  .cta {
+    margin: 0 var(--gutter);
+    height: 54px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    border-radius: 999px;
+    background: var(--ink);
+    color: #0b0c10;
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    pointer-events: auto;
+    box-shadow: 0 10px 34px rgba(0, 0, 0, 0.55);
+    transition: transform 0.14s ease;
+  }
+
+  .cta:active {
+    transform: scale(0.975);
+  }
+
+  .cta svg {
+    width: 17px;
+    height: 17px;
+  }
+</style>
+
+<style>
+  /* ------------------------------------------------------- panel de datos */
+
+  .sheet {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 6;
+    max-height: 88%;
+    display: flex;
+    flex-direction: column;
+    background: rgba(10, 11, 15, 0.94);
+    border-top: 1px solid var(--line);
+    border-radius: 26px 26px 0 0;
+    backdrop-filter: blur(24px);
+    transform: translateY(101%);
+    transition: transform 0.36s cubic-bezier(0.32, 0.72, 0, 1);
+    box-shadow: 0 -20px 60px rgba(0, 0, 0, 0.6);
+  }
+
+  .sheet.open {
+    transform: translateY(0);
+  }
+
+  .grip {
+    flex: none;
+    padding: 10px 0 4px;
+    display: grid;
+    place-items: center;
     cursor: grab;
     touch-action: none;
   }
 
-  #map.dragging {
-    cursor: grabbing;
-  }
-
-  .land {
-    fill: var(--land);
-    stroke: none;
-  }
-
-  .border {
-    fill: none;
-    stroke: var(--land-edge);
-    stroke-width: 0.7;
-    vector-effect: non-scaling-stroke;
-  }
-
-  /*
-   * 800 rutas dibujadas con el mismo peso son ruido, no información. La red
-   * entera queda como textura de fondo y sólo se levanta la de la compañía
-   * que se está mirando.
-   */
-  .route {
-    fill: none;
-    stroke: var(--route);
-    stroke-width: 0.6;
-    opacity: 0.5;
-    vector-effect: non-scaling-stroke;
-  }
-
-  .route.mine {
-    stroke: var(--ink-faint);
-    opacity: 0.9;
-  }
-
-  .apt {
-    fill: var(--ink-faint);
-  }
-
-  .apt.major {
-    fill: var(--ink-dim);
-  }
-
-  .apt-hit {
-    fill: transparent;
-    cursor: pointer;
-  }
-
-  .apt-label {
-    font-family: var(--mono);
-    font-size: 9px;
-    font-weight: 500;
-    fill: var(--ink-dim);
-    letter-spacing: 0.04em;
-    pointer-events: none;
-  }
-
-  .track {
-    fill: none;
-    stroke: var(--signal-dim);
-    stroke-width: 1;
-    stroke-dasharray: 3 4;
-    vector-effect: non-scaling-stroke;
-  }
-
-  .plane {
-    fill: var(--signal);
-    cursor: pointer;
-  }
-
-  .plane-ring {
-    fill: none;
-    stroke: var(--signal);
-    stroke-width: 1;
-    vector-effect: non-scaling-stroke;
-    opacity: 0.55;
-  }
-
-  .plane-tag {
-    font-family: var(--mono);
-    font-size: 9.5px;
-    font-weight: 500;
-    fill: var(--signal);
-    letter-spacing: 0.04em;
-    pointer-events: none;
-  }
-
-  /* ─── Controles flotantes sobre el mapa ──────────────────────────── */
-
-  .overlay {
-    position: absolute;
-    display: flex;
-    gap: 6px;
-    z-index: 2;
-  }
-
-  .overlay.tl {
-    top: 12px;
-    left: 12px;
-  }
-
-  .overlay.bl {
-    bottom: 12px;
-    left: 12px;
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .overlay.br {
-    bottom: 12px;
-    right: 12px;
-    flex-direction: column;
-  }
-
-  .chip {
-    font-family: var(--ui);
-    font-size: 10.5px;
-    font-weight: 500;
-    letter-spacing: 0.11em;
-    text-transform: uppercase;
-    color: var(--ink-dim);
-    background: color-mix(in srgb, var(--panel) 88%, transparent);
-    border: 1px solid var(--hairline-strong);
-    padding: 6px 10px;
-    cursor: pointer;
+  .grip i {
+    width: 40px;
+    height: 4px;
     border-radius: 2px;
+    background: #353843;
   }
 
-  .chip:hover {
-    color: var(--ink);
-    border-color: var(--ink-faint);
+  .sheet-head {
+    flex: none;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 4px var(--gutter) 10px;
   }
 
-  .chip[aria-pressed='true'] {
-    color: var(--void);
-    background: var(--ink-dim);
-    border-color: var(--ink-dim);
+  .sheet-head h2 {
+    flex: 1;
+    margin: 0;
+    font-size: 17px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
   }
 
-  .chip.square {
-    width: 30px;
-    padding: 6px 0;
-    text-align: center;
-    font-family: var(--mono);
-    font-size: 14px;
+  .tabs {
+    flex: none;
+    display: flex;
+    gap: 4px;
+    padding: 0 var(--gutter) 12px;
+  }
+
+  .tab {
+    padding: 7px 13px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--dim);
+    white-space: nowrap;
+  }
+
+  .tab[aria-selected='true'] {
+    background: var(--ink);
+    border-color: var(--ink);
+    color: #0b0c10;
+  }
+
+  .sheet-body {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 0 var(--gutter) calc(22px + var(--safe-bottom));
+    overscroll-behavior: contain;
+  }
+
+  .kpis {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 8px;
+  }
+
+  .kpi {
+    padding: 13px 14px;
+    border-radius: 15px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+  }
+
+  .kpi dt {
+    margin: 0;
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--faint);
+  }
+
+  .kpi dd {
+    margin: 5px 0 0;
+    font-size: 24px;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+  }
+
+  .kpi dd small {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--dim);
     letter-spacing: 0;
   }
 
-  .scalebar {
-    font-family: var(--mono);
-    font-size: 10px;
-    color: var(--ink-faint);
-    background: color-mix(in srgb, var(--panel) 88%, transparent);
-    border: 1px solid var(--hairline);
-    padding: 4px 8px;
-    letter-spacing: 0.05em;
+  .note {
+    margin: 14px 0 0;
+    padding: 12px 14px;
+    border-radius: 14px;
+    border: 1px solid rgba(255, 144, 54, 0.28);
+    background: var(--amber-dim);
+    font-size: 12px;
+    line-height: 1.55;
+    color: #e7cfb4;
   }
 
-  /* ─── Tira de vuelos en el aire ──────────────────────────────────── */
-
-  .strip {
-    background: color-mix(in srgb, var(--panel) 94%, transparent);
-    border: 1px solid var(--hairline-strong);
-    max-height: 178px;
-    overflow-y: auto;
-    min-width: 268px;
+  .note b {
+    color: var(--amber);
   }
 
-  .strip h3 {
-    margin: 0;
-    padding: 8px 11px 7px;
-    font-family: var(--ui);
-    font-size: 9.5px;
-    font-weight: 600;
-    letter-spacing: 0.16em;
-    text-transform: uppercase;
-    color: var(--ink-faint);
-    border-bottom: 1px solid var(--hairline);
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+  }
+
+  thead th {
     position: sticky;
     top: 0;
-    background: var(--panel);
+    z-index: 1;
+    padding: 8px 6px;
+    text-align: right;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--faint);
+    background: rgba(10, 11, 15, 0.97);
+    border-bottom: 1px solid var(--line);
   }
 
-  .strip-row {
-    display: grid;
-    grid-template-columns: 62px 1fr auto;
-    gap: 9px;
-    align-items: center;
-    padding: 6px 11px;
-    border-bottom: 1px solid var(--hairline);
-    cursor: pointer;
-    font-family: var(--mono);
-    font-size: 11px;
-    font-variant-numeric: tabular-nums;
-    color: var(--ink-dim);
+  thead th:first-child {
+    text-align: left;
   }
 
-  .strip-row:last-child {
+  tbody td {
+    padding: 9px 6px;
+    text-align: right;
+    border-bottom: 1px solid rgba(35, 37, 46, 0.6);
+    white-space: nowrap;
+  }
+
+  tbody td:first-child {
+    text-align: left;
+    white-space: normal;
+  }
+
+  tbody tr:last-child td {
     border-bottom: 0;
   }
 
-  .strip-row:hover,
-  .strip-row.on {
-    background: var(--panel-raised);
-    color: var(--ink);
+  .who {
+    font-weight: 600;
   }
 
-  .strip-row.on {
-    box-shadow: inset 2px 0 0 var(--signal);
-  }
-
-  .strip-row .cs {
-    color: var(--signal);
-    font-weight: 500;
-  }
-
-  .strip-row .pr {
-    color: var(--ink-faint);
+  .who span {
+    display: block;
     font-size: 10px;
-  }
-
-  /* ─── Inspector ──────────────────────────────────────────────────── */
-
-  .leg {
-    display: grid;
-    grid-template-columns: auto 1fr auto;
-    align-items: center;
-    gap: 10px;
-    margin: 4px 0 12px;
-  }
-
-  .leg .code {
-    font-family: var(--mono);
-    font-size: 26px;
     font-weight: 500;
-    letter-spacing: 0.01em;
-  }
-
-  .leg .wire {
-    height: 1px;
-    background: linear-gradient(to right, var(--hairline-strong), var(--signal-dim));
-    position: relative;
-  }
-
-  .leg .wire i {
-    position: absolute;
-    top: -3px;
-    width: 7px;
-    height: 7px;
-    background: var(--signal);
-    transform: translateX(-50%) rotate(45deg);
-  }
-
-  .leg .city {
-    font-family: var(--ui);
-    font-size: 10.5px;
     letter-spacing: 0.08em;
     text-transform: uppercase;
-    color: var(--ink-faint);
-    margin-top: 1px;
+    color: var(--faint);
   }
 
-  .rows {
+  .pos {
+    color: var(--green);
+  }
+
+  .neg {
+    color: var(--red);
+  }
+
+  .scroller {
+    overflow-x: auto;
+  }
+
+  .ledger {
     display: grid;
     gap: 1px;
-    background: var(--hairline);
-    border-top: 1px solid var(--hairline);
-    border-bottom: 1px solid var(--hairline);
-  }
-
-  .row {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    gap: 12px;
-    background: var(--panel);
-    padding: 7px 0;
-  }
-
-  .row dt {
-    font-family: var(--ui);
-    font-size: 10.5px;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: var(--ink-faint);
-  }
-
-  .row dd {
-    margin: 0;
-    font-family: var(--mono);
-    font-size: 12.5px;
-    font-variant-numeric: tabular-nums;
-    text-align: right;
-  }
-
-  .meter {
-    height: 3px;
-    background: var(--hairline);
-    margin-top: 9px;
+    background: var(--line);
+    border: 1px solid var(--line);
+    border-radius: 15px;
     overflow: hidden;
   }
 
-  .meter i {
-    display: block;
-    height: 100%;
-    background: var(--signal);
+  .ledger div {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 11px 14px;
+    background: var(--panel);
+    font-size: 13px;
   }
 
-  .meter.calm i {
-    background: var(--ink-dim);
+  .ledger dt {
+    margin: 0;
+    color: var(--dim);
+    font-size: 12px;
   }
 
-  .pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    font-family: var(--ui);
-    font-size: 10px;
-    font-weight: 500;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: var(--signal);
-    border: 1px solid var(--signal-dim);
-    padding: 2px 7px;
-    border-radius: 2px;
+  .ledger dd {
+    margin: 0;
+    font-weight: 600;
   }
 
-  .pill::before {
-    content: '';
-    width: 5px;
-    height: 5px;
-    border-radius: 50%;
-    background: var(--signal);
-    animation: pulse 2.4s ease-in-out infinite;
+  .veil {
+    position: fixed;
+    inset: 0;
+    z-index: 5;
+    background: rgba(4, 4, 6, 0.55);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
   }
 
-  @keyframes pulse {
-    0%,
-    100% {
-      opacity: 1;
+  .veil.on {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  /* ------------------------------------------------------------ escritorio */
+
+  @media (min-width: 900px) {
+    :root {
+      --gutter: 26px;
     }
-    50% {
-      opacity: 0.25;
+
+    .app {
+      grid-template-rows: auto 1fr;
+      grid-template-columns: minmax(340px, 30%) 1fr;
+    }
+
+    .topbar {
+      grid-column: 1 / -1;
+      padding-top: 18px;
+    }
+
+    .hero {
+      grid-column: 1;
+      align-self: center;
+      padding-top: 0;
+    }
+
+    .foot {
+      grid-column: 1;
+      align-self: end;
+      padding-bottom: 26px;
+    }
+
+    .rail {
+      flex-wrap: nowrap;
+    }
+
+    .card {
+      width: 190px;
+    }
+
+    .sheet {
+      left: auto;
+      right: 0;
+      top: 0;
+      bottom: 0;
+      width: min(520px, 46vw);
+      max-height: none;
+      border-radius: 24px 0 0 24px;
+      border-top: 0;
+      border-left: 1px solid var(--line);
+      transform: translateX(102%);
+    }
+
+    .sheet.open {
+      transform: translateX(0);
+    }
+
+    .grip {
+      display: none;
+    }
+
+    .sheet-head {
+      padding-top: 22px;
     }
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .pill::before {
-      animation: none;
-    }
-  }
-
-  .note {
-    font-size: 12px;
-    line-height: 1.5;
-    color: var(--ink-faint);
-  }
-
-  .note b {
-    color: var(--ink-dim);
-    font-weight: 500;
-  }
-
-  .legend {
-    display: grid;
-    gap: 6px;
-    font-family: var(--mono);
-    font-size: 10.5px;
-    color: var(--ink-faint);
-  }
-
-  .legend div {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-
-  .legend i {
-    width: 10px;
-    height: 10px;
-    flex: none;
-    display: inline-block;
-  }
-
-  /* ─── Adaptación a pantallas estrechas ───────────────────────────── */
-
-  @media (max-width: 1100px) {
-    .main {
-      grid-template-columns: 210px 1fr;
-    }
-
-    .inspector {
-      grid-column: 1 / -1;
-      border-left: 0;
-      border-top: 1px solid var(--hairline);
-    }
-  }
-
-  @media (max-width: 760px) {
-    .shell {
-      height: auto;
-      min-height: 100%;
-    }
-
-    .main {
-      grid-template-columns: 1fr;
-    }
-
-    .stage {
-      height: 62vh;
-      min-height: 340px;
-      border-bottom: 1px solid var(--hairline);
-    }
-
-    .rail {
-      border-right: 0;
-      border-bottom: 1px solid var(--hairline);
-      order: 2;
-    }
-
-    .inspector {
-      order: 3;
-    }
-
-    .topbar {
-      height: auto;
-      padding-block: 10px;
-      gap: 16px;
-    }
-
-    .overlay.bl .strip {
-      max-height: 128px;
-      min-width: 232px;
+    * {
+      animation-duration: 0.001ms !important;
+      transition-duration: 0.001ms !important;
     }
   }
 </style>
 
-<div class="shell">
+<canvas id="stars" aria-hidden="true"></canvas>
+<canvas
+  id="globe"
+  role="img"
+  aria-label="Globo terráqueo con la red aérea del mundo en juego"
+></canvas>
+<div class="scrim top" aria-hidden="true"></div>
+<div class="scrim bottom" aria-hidden="true"></div>
+<div id="chips"></div>
+
+<div class="app">
   <header class="topbar">
-    <div class="brand">
-      <b>Airline&nbsp;World</b>
-      <span id="world-name"></span>
-      <span class="replay" id="replay-note"></span>
+    <button
+      class="iconbtn"
+      id="recenter"
+      type="button"
+      title="Centrar en el vuelo"
+      aria-label="Centrar el globo en el vuelo seleccionado"
+    >
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.7"
+        stroke-linecap="round"
+      >
+        <circle cx="12" cy="12" r="8" />
+        <path d="M12 2v3M12 19v3M2 12h3M19 12h3" />
+        <circle cx="12" cy="12" r="2.2" fill="currentColor" stroke="none" />
+      </svg>
+    </button>
+    <div class="live">
+      <i class="dot"></i><span><b id="airborne">0</b> en vuelo</span>
     </div>
-    <div class="stat">
-      <span class="k">En el aire</span><span class="v live" id="t-air">0</span>
-    </div>
-    <div class="stat"><span class="k">Vuelos hoy</span><span class="v" id="t-flights">0</span></div>
-    <div class="stat"><span class="k">Pasajeros</span><span class="v" id="t-pax">0</span></div>
-    <div class="stat"><span class="k">Ocupación</span><span class="v" id="t-lf">0%</span></div>
-    <div class="stat"><span class="k">Puntualidad</span><span class="v" id="t-otp">0%</span></div>
-    <div class="stat"><span class="k">Queroseno</span><span class="v" id="t-fuel">0</span></div>
-    <div class="clock" id="clock">--:--:--</div>
+    <span class="spacer"></span>
+    <button
+      class="iconbtn"
+      id="shuffle"
+      type="button"
+      title="Otro vuelo"
+      aria-label="Saltar a otro vuelo"
+    >
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.7"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <path d="M17 3l4 4-4 4M21 7H3M7 21l-4-4 4-4M3 17h18" />
+      </svg>
+    </button>
+    <button
+      class="iconbtn"
+      id="open-ops"
+      type="button"
+      title="Centro de operaciones"
+      aria-label="Abrir el centro de operaciones"
+    >
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.7"
+        stroke-linecap="round"
+      >
+        <path d="M4 18V9M10 18V4M16 18v-6M22 18H2" />
+      </svg>
+    </button>
   </header>
 
-  <div class="main">
-    <aside class="rail">
-      <div class="section">
-        <h2>Compañía</h2>
-        <div class="carrier">
-          <div class="tail" id="c-tail">--</div>
-          <div>
-            <div class="carrier-name" id="c-name">—</div>
-            <div class="carrier-sub" id="c-sub">—</div>
-          </div>
-        </div>
-        <div class="kpis">
-          <div class="kpi"><div class="k">Flota</div><div class="v" id="c-fleet">0</div></div>
-          <div class="kpi"><div class="k">Rutas</div><div class="v" id="c-routes">0</div></div>
-          <div class="kpi"><div class="k">Ocupación</div><div class="v" id="c-lf">0<small>%</small></div></div>
-          <div class="kpi"><div class="k">Puntualidad</div><div class="v" id="c-otp">0<small>%</small></div></div>
-          <div class="kpi"><div class="k">Pasajeros</div><div class="v" id="c-pax">0</div></div>
-          <div class="kpi"><div class="k">Resultado</div><div class="v" id="c-result">0</div></div>
-        </div>
+  <section class="hero">
+    <p class="greeting" id="greeting">Buenas noches</p>
+    <h1 class="destination" id="dest-city">—</h1>
+    <div class="subline" id="subline"></div>
+  </section>
+
+  <footer class="foot">
+    <div class="scrub">
+      <div class="scrub-head">
+        <span id="scrub-left">—</span>
+        <b id="scrub-mid">—</b>
+        <span id="scrub-right">—</span>
       </div>
-
-      <div class="section">
-        <h2>Clasificación por resultado</h2>
-        <table class="board">
-          <thead>
-            <tr>
-              <th>Compañía</th>
-              <th>Ocup.</th>
-              <th>Result.</th>
-            </tr>
-          </thead>
-          <tbody id="board"></tbody>
-        </table>
+      <div class="ruler">
+        <div class="ticks" id="ticks"></div>
+        <div class="cursor" id="cursor"></div>
       </div>
+    </div>
 
-      <div class="section">
-        <h2>Leyenda</h2>
-        <div class="legend">
-          <div><i style="background: var(--signal)"></i> Avión en vuelo</div>
-          <div><i style="background: var(--ink-dim); border-radius: 50%"></i> Aeropuerto</div>
-          <div><i style="background: var(--ink-faint)"></i> Red de la compañía</div>
-          <div><i style="background: var(--route)"></i> Resto del mundo</div>
-        </div>
-      </div>
-    </aside>
+    <div class="rail" id="rail" role="listbox" aria-label="Vuelos"></div>
 
-    <section class="stage">
-      <div class="overlay tl">
-        <button class="chip" id="l-routes" aria-pressed="true" type="button">Rutas</button>
-        <button class="chip" id="l-labels" aria-pressed="true" type="button">Códigos</button>
-        <button class="chip" id="l-tracks" aria-pressed="true" type="button">Trayectos</button>
-      </div>
-
-      <div class="overlay br">
-        <button class="chip square" id="z-in" type="button" aria-label="Acercar">+</button>
-        <button class="chip square" id="z-out" type="button" aria-label="Alejar">−</button>
-        <button class="chip square" id="z-reset" type="button" aria-label="Encuadre inicial">⤾</button>
-      </div>
-
-      <div class="overlay bl">
-        <div class="strip">
-          <h3>En el aire ahora</h3>
-          <div id="strip"></div>
-        </div>
-        <div class="scalebar" id="scalebar">—</div>
-      </div>
-
-      <svg id="map" role="img" aria-label="Mapa de operaciones en Europa"></svg>
-    </section>
-
-    <aside class="inspector" id="inspector"></aside>
-  </div>
+    <button class="cta" id="cta" type="button">
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+      >
+        <path d="M4 18V9M10 18V4M16 18v-6M22 18H2" />
+      </svg>
+      Centro de operaciones
+    </button>
+  </footer>
 </div>
+
+<div class="veil" id="veil"></div>
+
+<aside class="sheet" id="sheet" aria-hidden="true">
+  <div class="grip" id="grip"><i></i></div>
+  <div class="sheet-head">
+    <h2 id="sheet-title">Centro de operaciones</h2>
+    <button class="iconbtn" id="close-ops" type="button" aria-label="Cerrar">
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.8"
+        stroke-linecap="round"
+      >
+        <path d="M6 6l12 12M18 6L6 18" />
+      </svg>
+    </button>
+  </div>
+  <div class="tabs" role="tablist">
+    <button class="tab" type="button" role="tab" data-tab="world" aria-selected="true">
+      Mundo
+    </button>
+    <button class="tab" type="button" role="tab" data-tab="airlines" aria-selected="false">
+      Aerolíneas
+    </button>
+    <button class="tab" type="button" role="tab" data-tab="flight" aria-selected="false">
+      Vuelo
+    </button>
+  </div>
+  <div class="sheet-body" id="sheet-body"></div>
+</aside>
 
 <script id="snapshot" type="application/json">
   __SNAPSHOT__
+</script>
+
+<script>
+  __VENDOR__;
 </script>
 
 <script>
@@ -898,915 +1029,1259 @@
     'use strict';
 
     var DATA = JSON.parse(document.getElementById('snapshot').textContent);
-    var VIEW = DATA.map.view;
-    var PROJ = DATA.projection;
-
-    /* ─── Proyección ────────────────────────────────────────────────
-     * Los mismos parámetros con los que se dibujó el mapa, que viajan con
-     * los datos. Vive en el cliente porque el cliente necesita situar
-     * puntos que se mueven: un avión no se pide al servidor cada segundo,
-     * se calcula.
-     */
-    function mercY(lat) {
-      return Math.log(Math.tan(Math.PI / 4 + (lat * Math.PI) / 360));
-    }
-
-    function project(lon, lat) {
-      return {
-        x: PROJ.translateX + PROJ.scale * lon * (Math.PI / 180),
-        y: PROJ.translateY - PROJ.scale * mercY(lat),
-      };
-    }
-
-    /* ─── Posición de un avión ──────────────────────────────────────
-     * Interpolación esférica sobre el arco de círculo máximo, idéntica a
-     * la del dominio. Es la pieza que permite que el servidor no guarde
-     * ni difunda posiciones: todos los clientes calculan lo mismo.
-     */
+    var d3 = window.d3;
     var RAD = Math.PI / 180;
     var DEG = 180 / Math.PI;
-
-    function slerp(lat1, lon1, lat2, lon2, f) {
-      var p1 = lat1 * RAD;
-      var l1 = lon1 * RAD;
-      var p2 = lat2 * RAD;
-      var l2 = lon2 * RAD;
-
-      var d =
-        2 *
-        Math.asin(
-          Math.min(
-            1,
-            Math.sqrt(
-              Math.pow(Math.sin((p2 - p1) / 2), 2) +
-                Math.cos(p1) * Math.cos(p2) * Math.pow(Math.sin((l2 - l1) / 2), 2)
-            )
-          )
-        );
-
-      if (d < 1e-9) return { lat: lat1, lon: lon1 };
-
-      var a = Math.sin((1 - f) * d) / Math.sin(d);
-      var b = Math.sin(f * d) / Math.sin(d);
-      var x = a * Math.cos(p1) * Math.cos(l1) + b * Math.cos(p2) * Math.cos(l2);
-      var y = a * Math.cos(p1) * Math.sin(l1) + b * Math.cos(p2) * Math.sin(l2);
-      var z = a * Math.sin(p1) + b * Math.sin(p2);
-
-      return { lat: Math.atan2(z, Math.hypot(x, y)) * DEG, lon: Math.atan2(y, x) * DEG };
-    }
-
-    function bearing(lat1, lon1, lat2, lon2) {
-      var p1 = lat1 * RAD;
-      var p2 = lat2 * RAD;
-      var dl = (lon2 - lon1) * RAD;
-      var y = Math.sin(dl) * Math.cos(p2);
-      var x = Math.cos(p1) * Math.sin(p2) - Math.sin(p1) * Math.cos(p2) * Math.cos(dl);
-      return (Math.atan2(y, x) * DEG + 360) % 360;
-    }
-
-    /* ─── Reproducción del día simulado ─────────────────────────────
-     * La instantánea guarda un día completo con las horas de cada vuelo
-     * medidas desde medianoche. La página lo sitúa sobre la fecha de hoy,
-     * de modo que a las 19:20 se ve lo que de verdad opera a las 19:20.
-     *
-     * No es un truco de escaparate: las plantillas de programación de las
-     * compañías se repiten a diario, así que reproducir el día es lo mismo
-     * que mirar el día siguiente.
-     */
     var MS_DAY = 86400000;
 
-    function todayStart(now) {
+    /* ------------------------------------------------------------ índices */
+
+    var byIata = {};
+    DATA.airports.forEach(function (a) {
+      byIata[a.iata] = a;
+    });
+
+    var airlineByName = {};
+    DATA.airlines.forEach(function (a) {
+      airlineByName[a.name] = a;
+    });
+
+    /**
+     * La instantánea guarda el minuto del día en que sale y llega cada vuelo,
+     * no el instante en que se simuló. Así el día se reproduce sobre la fecha de
+     * hoy: lo que se ve a las 19:20 de cualquier día es lo que de verdad opera a
+     * esa hora, y la vista previa sigue viva mañana.
+     */
+    function dayBase(now) {
       return Math.floor(now / MS_DAY) * MS_DAY;
     }
 
-    /** Horario de un vuelo situado sobre el día de hoy. */
     function schedule(f, now) {
-      var base = todayStart(now);
-      var dep = base + f.depMs;
-      var arr = base + f.arrMs;
-      var total = arr - dep;
+      var span = f.arrMs - f.depMs;
+      var dep = dayBase(now) + f.depMs;
+      // La plantilla se repite cada día, así que un vuelo que ya aterrizó no es
+      // un vuelo muerto: su próxima ocurrencia es la de mañana. Sin esto la
+      // página se quedaba en blanco desde el último aterrizaje hasta el primer
+      // despegue del día siguiente.
+      if (dep + span <= now) dep += MS_DAY;
       return {
         dep: dep,
-        arr: arr,
-        t: total <= 0 ? 1 : Math.max(0, Math.min(1, (now - dep) / total)),
-        airborne: now >= dep && now < arr,
+        arr: dep + span,
+        span: span,
+        t: span <= 0 ? 1 : Math.max(0, Math.min(1, (now - dep) / span)),
+        airborne: now >= dep && now < dep + span,
       };
     }
 
-    function airborneFlights(now) {
-      return DATA.flights.filter(function (f) {
-        return schedule(f, now).airborne;
+    /* ------------------------------------------------- geometría esférica */
+
+    /**
+     * Interpolación sobre el círculo máximo. Un avión no viaja en línea recta
+     * sobre el mapa: viaja por el arco más corto de la esfera, y en un globo la
+     * diferencia se ve a simple vista.
+     */
+    function slerp(f, t) {
+      var p1 = f.oLat * RAD,
+        l1 = f.oLon * RAD,
+        p2 = f.dLat * RAD,
+        l2 = f.dLon * RAD;
+      var dp = p2 - p1,
+        dl = l2 - l1;
+      var h =
+        Math.sin(dp / 2) * Math.sin(dp / 2) +
+        Math.cos(p1) * Math.cos(p2) * Math.sin(dl / 2) * Math.sin(dl / 2);
+      var d = 2 * Math.asin(Math.min(1, Math.sqrt(h)));
+      if (d < 1e-9) return [f.oLon, f.oLat];
+
+      var a = Math.sin((1 - t) * d) / Math.sin(d);
+      var b = Math.sin(t * d) / Math.sin(d);
+      var x = a * Math.cos(p1) * Math.cos(l1) + b * Math.cos(p2) * Math.cos(l2);
+      var y = a * Math.cos(p1) * Math.sin(l1) + b * Math.cos(p2) * Math.sin(l2);
+      var z = a * Math.sin(p1) + b * Math.sin(p2);
+      return [Math.atan2(y, x) * DEG, Math.atan2(z, Math.sqrt(x * x + y * y)) * DEG];
+    }
+
+    var arcCache = {};
+    function arcPoints(f) {
+      if (arcCache[f.id] === undefined) {
+        var pts = [];
+        for (var i = 0; i <= 72; i++) pts.push(slerp(f, i / 72));
+        arcCache[f.id] = pts;
+      }
+      return arcCache[f.id];
+    }
+
+    /* --------------------------------------------------------- el planeta */
+
+    var globe = document.getElementById('globe');
+    var ctx = globe.getContext('2d');
+    var starsCanvas = document.getElementById('stars');
+    var world = document.createElement('canvas');
+    var wctx = world.getContext('2d');
+
+    var projection = d3.geoOrthographic().clipAngle(90).precision(0.35);
+    var draw = d3.geoPath(projection, wctx);
+    var drawLive = d3.geoPath(projection, ctx);
+    var graticule = d3.geoGraticule().step([15, 15])();
+
+    var view = { w: 0, h: 0, dpr: 1 };
+    var cam = { lon: 6, lat: 46, zoom: 1 };
+    var baseScale = 200;
+    // Dónde cae el centro del planeta en pantalla. En móvil, algo por encima
+    // del centro para dejar respirar al carrusel; en pantalla ancha, a la
+    // derecha, porque la columna de texto ocupa la izquierda.
+    var focus = { x: 0, y: 0 };
+
+    // Sin esto la tierra se pinta en cada fotograma aunque nadie haya movido el
+    // globo. Lo estático se cachea y sólo se rehace cuando cambia la cámara.
+    var worldKey = '';
+
+    function clampCam() {
+      cam.lat = Math.max(-84, Math.min(84, cam.lat));
+      cam.lon = ((((cam.lon + 180) % 360) + 360) % 360) - 180;
+      cam.zoom = Math.max(1, Math.min(8, cam.zoom));
+    }
+
+    function applyCam() {
+      clampCam();
+      projection
+        .scale(baseScale * cam.zoom)
+        .translate([focus.x, focus.y])
+        .rotate([-cam.lon, -cam.lat]);
+    }
+
+    /** Mueve la cámara como si el dedo arrastrase el punto que tiene debajo. */
+    function dragBy(dx, dy) {
+      var k = DEG / projection.scale();
+      var shrink = Math.max(0.25, Math.cos(cam.lat * RAD));
+      cam.lon -= (dx * k) / shrink;
+      cam.lat += dy * k;
+      applyCam();
+    }
+
+    /** Deja el punto geográfico dado justo bajo el píxel pedido. */
+    function pinGeoTo(geo, px, py) {
+      for (var i = 0; i < 4; i++) {
+        var p = projection(geo);
+        if (!p) return;
+        var dx = px - p[0];
+        var dy = py - p[1];
+        if (Math.abs(dx) < 0.4 && Math.abs(dy) < 0.4) return;
+        dragBy(dx, dy);
+      }
+    }
+
+    function visible(lon, lat) {
+      return d3.geoDistance([lon, lat], [cam.lon, cam.lat]) < Math.PI / 2 - 0.01;
+    }
+
+    /* ------------------------------------------------------ capa estática */
+
+    function paintWorld() {
+      var cx = focus.x;
+      var cy = focus.y;
+      var r = projection.scale();
+
+      wctx.setTransform(view.dpr, 0, 0, view.dpr, 0, 0);
+      wctx.clearRect(0, 0, view.w, view.h);
+
+      // Atmósfera: un halo por fuera del borde, que es lo que separa el planeta
+      // del vacío sin necesidad de dibujarle un contorno duro.
+      var halo = wctx.createRadialGradient(cx, cy, r * 0.97, cx, cy, r * 1.16);
+      halo.addColorStop(0, 'rgba(94,142,196,0.20)');
+      halo.addColorStop(1, 'rgba(94,142,196,0)');
+      wctx.fillStyle = halo;
+      wctx.beginPath();
+      wctx.arc(cx, cy, r * 1.16, 0, 2 * Math.PI);
+      wctx.fill();
+
+      // Océano, iluminado desde arriba a la izquierda para que la esfera tenga
+      // volumen en vez de parecer un círculo plano.
+      var sea = wctx.createRadialGradient(cx - r * 0.36, cy - r * 0.42, r * 0.05, cx, cy, r * 1.02);
+      sea.addColorStop(0, '#1b2531');
+      sea.addColorStop(0.55, '#101720');
+      sea.addColorStop(1, '#05070b');
+      wctx.fillStyle = sea;
+      wctx.beginPath();
+      wctx.arc(cx, cy, r, 0, 2 * Math.PI);
+      wctx.fill();
+
+      wctx.save();
+      wctx.beginPath();
+      wctx.arc(cx, cy, r, 0, 2 * Math.PI);
+      wctx.clip();
+
+      wctx.strokeStyle = 'rgba(126,158,199,0.065)';
+      wctx.lineWidth = 0.6;
+      wctx.beginPath();
+      draw(graticule);
+      wctx.stroke();
+
+      wctx.fillStyle = '#1b222c';
+      wctx.strokeStyle = 'rgba(138,168,206,0.20)';
+      wctx.lineWidth = 0.6;
+      wctx.beginPath();
+      draw(DATA.map.land);
+      wctx.fill();
+      wctx.stroke();
+
+      wctx.strokeStyle = 'rgba(138,168,206,0.13)';
+      wctx.lineWidth = 0.5;
+      wctx.beginPath();
+      draw(DATA.map.borders);
+      wctx.stroke();
+
+      // La red: todas las rutas activas del mundo, apenas insinuadas. Son el
+      // fondo sobre el que destaca el vuelo elegido, no el protagonista.
+      wctx.strokeStyle = 'rgba(255,144,54,0.085)';
+      wctx.lineWidth = 0.55;
+      wctx.beginPath();
+      DATA.routes.forEach(function (route) {
+        if (!visible(route.oLon, route.oLat) && !visible(route.dLon, route.dLat)) return;
+        draw({
+          type: 'LineString',
+          coordinates: [
+            [route.oLon, route.oLat],
+            [route.dLon, route.dLat],
+          ],
+        });
+      });
+      wctx.stroke();
+
+      paintCityLights();
+      wctx.restore();
+    }
+
+    /**
+     * Los aeropuertos son las luces de las ciudades. El tamaño sale del peso de
+     * mercado, así que el planeta se ilumina donde de verdad hay tráfico.
+     */
+    function paintCityLights() {
+      var zoomBoost = 0.72 + cam.zoom * 0.14;
+      // De lejos sólo se ven las capitales; al acercarse van encendiéndose las
+      // demás. Dibujarlas todas desde el principio convierte Europa en una
+      // mancha naranja en la que no se distingue nada.
+      var floor = cam.zoom < 1.5 ? 4 : cam.zoom < 2.4 ? 3 : cam.zoom < 3.6 ? 2 : 0;
+
+      DATA.airports.forEach(function (a) {
+        if (a.size < floor) return;
+        if (!visible(a.lon, a.lat)) return;
+        var p = projection([a.lon, a.lat]);
+        if (!p) return;
+        var r = (0.5 + Math.sqrt(a.weight) / 17) * zoomBoost;
+
+        wctx.fillStyle = 'rgba(255,160,80,0.13)';
+        wctx.beginPath();
+        wctx.arc(p[0], p[1], r * 3.4, 0, 2 * Math.PI);
+        wctx.fill();
+
+        wctx.fillStyle = a.size >= 4 ? '#ffdcb0' : 'rgba(255,172,102,0.8)';
+        wctx.beginPath();
+        wctx.arc(p[0], p[1], r, 0, 2 * Math.PI);
+        wctx.fill();
       });
     }
 
-    /* ─── Formato ───────────────────────────────────────────────────── */
+    /* ------------------------------------------------------ capa animada */
 
-    var nf = new Intl.NumberFormat('es-ES');
-    var ef = new Intl.NumberFormat('es-ES', {
-      style: 'currency',
-      currency: 'EUR',
-      maximumFractionDigits: 0,
-    });
+    function planeAt(f, t) {
+      var here = slerp(f, t);
+      var ahead = slerp(f, Math.min(1, t + 0.004));
+      if (!visible(here[0], here[1])) return null;
+      var a = projection(here);
+      var b = projection(ahead);
+      if (!a || !b) return null;
+      return { x: a[0], y: a[1], angle: Math.atan2(b[1] - a[1], b[0] - a[0]), geo: here };
+    }
+
+    function drawPlane(x, y, angle, size, fill, glow) {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(angle);
+      if (glow) {
+        ctx.shadowColor = glow;
+        ctx.shadowBlur = 14;
+      }
+      ctx.fillStyle = fill;
+      ctx.beginPath();
+      ctx.moveTo(size, 0);
+      ctx.lineTo(-size * 0.75, size * 0.62);
+      ctx.lineTo(-size * 0.4, 0);
+      ctx.lineTo(-size * 0.75, -size * 0.62);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    }
+
+    function paintLive(now, flying, selected) {
+      ctx.setTransform(view.dpr, 0, 0, view.dpr, 0, 0);
+      ctx.clearRect(0, 0, view.w, view.h);
+      ctx.drawImage(world, 0, 0, view.w, view.h);
+
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(focus.x, focus.y, projection.scale(), 0, 2 * Math.PI);
+      ctx.clip();
+
+      if (selected) {
+        var s = schedule(selected, now);
+        var pts = arcPoints(selected);
+        var cut = Math.max(1, Math.round(s.t * (pts.length - 1)));
+
+        ctx.lineWidth = 1;
+        ctx.setLineDash([3, 4]);
+        ctx.strokeStyle = 'rgba(255,255,255,0.32)';
+        ctx.beginPath();
+        drawLive({ type: 'LineString', coordinates: pts.slice(cut) });
+        ctx.stroke();
+
+        ctx.setLineDash([]);
+        ctx.lineWidth = 1.8;
+        ctx.strokeStyle = '#ffffff';
+        ctx.shadowColor = 'rgba(255,255,255,0.55)';
+        ctx.shadowBlur = 10;
+        ctx.beginPath();
+        drawLive({ type: 'LineString', coordinates: pts.slice(0, cut + 1) });
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+
+        [
+          [selected.oLon, selected.oLat],
+          [selected.dLon, selected.dLat],
+        ].forEach(function (geo, index) {
+          if (!visible(geo[0], geo[1])) return;
+          var p = projection(geo);
+          if (!p) return;
+          ctx.fillStyle = index === 0 ? '#ffffff' : '#ff9036';
+          ctx.shadowColor = index === 0 ? 'rgba(255,255,255,0.8)' : 'rgba(255,144,54,0.9)';
+          ctx.shadowBlur = 12;
+          ctx.beginPath();
+          ctx.arc(p[0], p[1], 3.4, 0, 2 * Math.PI);
+          ctx.fill();
+          ctx.shadowBlur = 0;
+        });
+      }
+
+      flying.forEach(function (item) {
+        if (selected && item.flight.id === selected.id) return;
+        var pos = planeAt(item.flight, item.state.t);
+        if (pos) drawPlane(pos.x, pos.y, pos.angle, 3.4, 'rgba(255,167,92,0.82)', null);
+      });
+
+      if (selected) {
+        var st = schedule(selected, now);
+        var pos = planeAt(selected, st.t);
+        if (pos) drawPlane(pos.x, pos.y, pos.angle, 7, '#ffffff', 'rgba(255,255,255,0.9)');
+      }
+
+      ctx.restore();
+    }
+
+    /* ------------------------------------------------------------ estrellas */
+
+    /**
+     * Generador con semilla: el cielo tiene que salir igual en cada carga y en
+     * cada dispositivo. Un Math.random() aquí haría que la misma captura de
+     * pantalla no se pudiera repetir nunca.
+     */
+    function seeded(seed) {
+      var s = seed >>> 0;
+      return function () {
+        s = (s + 0x6d2b79f5) >>> 0;
+        var t = s;
+        t = Math.imul(t ^ (t >>> 15), t | 1);
+        t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+      };
+    }
+
+    function paintStars() {
+      var sctx = starsCanvas.getContext('2d');
+      var rand = seeded(20260920);
+      sctx.setTransform(view.dpr, 0, 0, view.dpr, 0, 0);
+      sctx.clearRect(0, 0, view.w, view.h);
+      sctx.fillStyle = '#08080a';
+      sctx.fillRect(0, 0, view.w, view.h);
+
+      var count = Math.round((view.w * view.h) / 5200);
+      for (var i = 0; i < count; i++) {
+        var x = rand() * view.w;
+        var y = rand() * view.h;
+        var r = rand();
+        sctx.fillStyle = 'rgba(206,219,238,' + (0.12 + r * 0.55).toFixed(3) + ')';
+        sctx.beginPath();
+        sctx.arc(x, y, 0.3 + r * 1.1, 0, 2 * Math.PI);
+        sctx.fill();
+      }
+    }
+
+    /* ------------------------------------------------------------- formato */
+
+    function pad(n) {
+      return (n < 10 ? '0' : '') + n;
+    }
 
     function hhmm(ms) {
       var d = new Date(ms);
-      return (
-        String(d.getUTCHours()).padStart(2, '0') + ':' + String(d.getUTCMinutes()).padStart(2, '0')
-      );
+      return pad(d.getUTCHours()) + ':' + pad(d.getUTCMinutes());
     }
 
-    function compact(value) {
-      if (Math.abs(value) >= 1e6) return (value / 1e6).toFixed(1).replace('.', ',') + ' M';
-      if (Math.abs(value) >= 1e3) return Math.round(value / 1e3) + ' k';
-      return String(Math.round(value));
+    function duration(ms) {
+      var total = Math.max(0, Math.round(ms / 60000));
+      var h = Math.floor(total / 60);
+      var m = total % 60;
+      return h > 0 ? h + 'h ' + pad(m) + 'm' : m + 'm';
     }
 
-    function el(tag, attrs) {
-      var node = document.createElementNS('http://www.w3.org/2000/svg', tag);
-      for (var key in attrs) node.setAttribute(key, attrs[key]);
-      return node;
+    function thousands(n) {
+      return Math.round(n).toLocaleString('es-ES');
     }
 
-    /* ─── Construcción del mapa ─────────────────────────────────────── */
+    function euros(n) {
+      var abs = Math.abs(n);
+      if (abs >= 1e6) return (n / 1e6).toFixed(1).replace('.', ',') + ' M€';
+      if (abs >= 1e3) return Math.round(n / 1e3) + ' k€';
+      return Math.round(n) + ' €';
+    }
 
-    var svg = document.getElementById('map');
-    svg.setAttribute('viewBox', '0 0 ' + VIEW.width + ' ' + VIEW.height);
-    svg.setAttribute('preserveAspectRatio', 'xMidYMid slice');
+    function cityOf(code) {
+      var a = byIata[code];
+      return a ? a.city || a.name : code;
+    }
 
-    var gRoot = el('g', {});
-    var gLand = el('g', {});
-    var gRoutes = el('g', {});
-    var gAirports = el('g', {});
-    var gLabels = el('g', {});
-    var gTracks = el('g', {});
-    var gPlanes = el('g', {});
-    gRoot.appendChild(gLand);
-    gRoot.appendChild(gRoutes);
-    gRoot.appendChild(gAirports);
-    gRoot.appendChild(gLabels);
-    gRoot.appendChild(gTracks);
-    gRoot.appendChild(gPlanes);
-    svg.appendChild(gRoot);
+    /* -------------------------------------------------------------- estado */
 
-    // La tierra es una sola masa rellena; las fronteras van encima, sólo
-    // trazadas. Separarlas evita los agujeros que deja rellenar país a país.
-    gLand.appendChild(el('path', { d: DATA.map.land, class: 'land' }));
-    gLand.appendChild(el('path', { d: DATA.map.borders, class: 'border' }));
+    var selectedId = null;
+    var listed = [];
+    var RAIL_SIZE = 20;
+    var followSelection = true;
 
-    /* Las rutas se dibujan con una ligera comba. Un arco se distingue del
-     * siguiente cuando dos compañías sirven el mismo par, y además insinúa
-     * la trayectoria real, que no es una recta sobre el papel. */
-    var routeNodes = DATA.routes.map(function (r) {
-      var mx = (r.x1 + r.x2) / 2;
-      var my = (r.y1 + r.y2) / 2;
-      var dx = r.x2 - r.x1;
-      var dy = r.y2 - r.y1;
-      var len = Math.hypot(dx, dy) || 1;
-      var bow = Math.min(len * 0.11, 46);
-      var node = el('path', {
-        d:
-          'M' + r.x1 + ',' + r.y1 +
-          ' Q' + (mx - (dy / len) * bow) + ',' + (my + (dx / len) * bow) +
-          ' ' + r.x2 + ',' + r.y2,
-        class: 'route',
+    function flightsNow(now) {
+      var flying = [];
+      DATA.flights.forEach(function (f) {
+        var state = schedule(f, now);
+        if (state.airborne) flying.push({ flight: f, state: state });
       });
-      gRoutes.appendChild(node);
-      return { airline: r.airline, node: node };
-    });
+      flying.sort(function (a, b) {
+        return a.state.dep - b.state.dep;
+      });
+      return flying;
+    }
 
-    function highlightNetwork(name) {
-      routeNodes.forEach(function (r) {
-        r.node.classList.toggle('mine', r.airline === name);
+    /** Lo próximo que despega, para cuando el mundo duerme y no hay nadie en el aire. */
+    function upcoming(now) {
+      var next = DATA.flights.map(function (f) {
+        return { flight: f, state: schedule(f, now) };
+      });
+      next.sort(function (a, b) {
+        return a.state.dep - b.state.dep;
+      });
+      return next.slice(0, 12);
+    }
+
+    function findFlight(id) {
+      for (var i = 0; i < DATA.flights.length; i++) {
+        if (DATA.flights[i].id === id) return DATA.flights[i];
+      }
+      return null;
+    }
+
+    /* --------------------------------------------------------- interacción */
+
+    var pointers = {};
+    var lastPinch = 0;
+    var drag = null;
+    var velocity = { x: 0, y: 0 };
+    var spin = null;
+    var lastTap = 0;
+    var idleSince = Date.now();
+
+    function pointerList() {
+      return Object.keys(pointers).map(function (k) {
+        return pointers[k];
       });
     }
 
-    var airportNodes = {};
-
-    DATA.airports.forEach(function (a) {
-      var major = a.size >= 4;
-      var dot = el('circle', {
-        cx: a.x,
-        cy: a.y,
-        r: major ? 2.6 : 1.7,
-        class: 'apt' + (major ? ' major' : ''),
-      });
-      var hit = el('circle', { cx: a.x, cy: a.y, r: 9, class: 'apt-hit' });
-      hit.addEventListener('click', function (e) {
-        e.stopPropagation();
-        selectAirport(a.iata);
-      });
-      gAirports.appendChild(dot);
-      gAirports.appendChild(hit);
-
-      var label = el('text', { x: a.x + 5, y: a.y + 3, class: 'apt-label' });
-      label.textContent = a.iata;
-      label.dataset.size = String(a.size);
-      gLabels.appendChild(label);
-
-      airportNodes[a.iata] = { data: a, dot: dot, label: label };
-    });
-
-    /* ─── Vuelos ────────────────────────────────────────────────────── */
-
-    /* Se crea un símbolo por vuelo del día y se muestra sólo mientras está
-     * en el aire. Crear y destruir nodos cada segundo sería más costoso que
-     * tener 360 escondidos. */
-    var planes = DATA.flights.map(function (f) {
-      var group = el('g', { class: 'plane-group' });
-      var ring = el('circle', { r: 7, class: 'plane-ring', opacity: 0 });
-      var body = el('path', { d: 'M0,-5.4 L3.6,4.6 L0,2.6 L-3.6,4.6 Z', class: 'plane' });
-      var tag = el('text', { x: 10, y: 3.5, class: 'plane-tag' });
-      tag.textContent = f.callsign;
-
-      body.addEventListener('click', function (e) {
-        e.stopPropagation();
-        selectFlight(f.id);
-      });
-
-      group.appendChild(ring);
-      group.appendChild(body);
-      group.appendChild(tag);
-      gPlanes.appendChild(group);
-
-      var track = el('path', { class: 'track' });
-      gTracks.appendChild(track);
-
-      group.style.display = 'none';
-      track.style.display = 'none';
-
-      return { f: f, group: group, body: body, ring: ring, tag: tag, track: track, pos: null };
-    });
-
-    var planeById = {};
-    planes.forEach(function (p) {
-      planeById[p.f.id] = p;
-    });
-
-    /* ─── Cámara ────────────────────────────────────────────────────── */
-
-    var cam = { k: 1, x: 0, y: 0 };
-
-    function applyCam() {
-      gRoot.setAttribute(
-        'transform',
-        'translate(' + cam.x + ',' + cam.y + ') scale(' + cam.k + ')'
-      );
-
-      // Los símbolos mantienen su tamaño en pantalla al acercar: un punto de
-      // aeropuerto que creciera con el zoom taparía justo lo que se quiere ver.
-      var inv = 1 / cam.k;
-      Object.keys(airportNodes).forEach(function (code) {
-        var node = airportNodes[code];
-        var major = node.data.size >= 4;
-        node.dot.setAttribute('r', String((major ? 2.6 : 1.7) * inv));
-        var visible = labelsOn && node.data.size >= labelThreshold();
-        node.label.style.display = visible ? '' : 'none';
-        node.label.setAttribute('transform', labelTransform(node.data, inv));
-      });
-
-      planes.forEach(function (p) {
-        p.tag.setAttribute('transform', 'scale(' + inv + ')');
-        p.tag.setAttribute('x', String(10));
-        p.tag.setAttribute('y', String(3.5));
-      });
-
-      render();
-      updateScale();
-    }
-
-    /** Latitud que corresponde a una coordenada y del encuadre. */
-    function unprojectLat(y) {
-      return (2 * Math.atan(Math.exp((PROJ.translateY - y) / PROJ.scale)) - Math.PI / 2) * DEG;
-    }
-
-    function labelTransform(a, inv) {
-      return 'translate(' + a.x + ',' + a.y + ') scale(' + inv + ') translate(5,3)';
-    }
-
-    function labelThreshold() {
-      if (cam.k >= 6) return 1;
-      if (cam.k >= 3.2) return 2;
-      if (cam.k >= 1.9) return 3;
-      return 4;
-    }
-
-    function updateScale() {
-      // Un grado de longitud a la latitud del centro del encuadre, en km.
-      var midLat = unprojectLat(VIEW.height / 2);
-      var kmPerDeg = 111.32 * Math.cos(midLat * RAD);
-      var pxPerDeg = PROJ.scale * RAD * cam.k;
-      var target = 140;
-      var km = (target / pxPerDeg) * kmPerDeg;
-      var step = Math.pow(10, Math.floor(Math.log10(km)));
-      var nice = [1, 2, 5, 10].map(function (m) { return m * step; })
-        .reduce(function (best, v) { return Math.abs(v - km) < Math.abs(best - km) ? v : best; });
-      document.getElementById('scalebar').textContent =
-        '◀ ' + nf.format(Math.round(nice)) + ' km ▶   ·   ×' + cam.k.toFixed(1);
-    }
-
-    function clampCam() {
-      var rect = svg.getBoundingClientRect();
-      var scaleToFit = Math.max(rect.width / VIEW.width, rect.height / VIEW.height);
-      var w = VIEW.width * scaleToFit * cam.k;
-      var h = VIEW.height * scaleToFit * cam.k;
-      var maxX = Math.max(0, (w - rect.width) / 2 / scaleToFit);
-      var maxY = Math.max(0, (h - rect.height) / 2 / scaleToFit);
-      cam.x = Math.max(-maxX * cam.k, Math.min(maxX * cam.k, cam.x));
-      cam.y = Math.max(-maxY * cam.k, Math.min(maxY * cam.k, cam.y));
-    }
-
-    function zoomAt(factor, cx, cy) {
-      var next = Math.max(1, Math.min(14, cam.k * factor));
-      var ratio = next / cam.k;
-      cam.x = cx - (cx - cam.x) * ratio;
-      cam.y = cy - (cy - cam.y) * ratio;
-      cam.k = next;
-      clampCam();
-      applyCam();
-    }
-
-    function svgPoint(evt) {
-      var rect = svg.getBoundingClientRect();
-      var scaleToFit = Math.max(rect.width / VIEW.width, rect.height / VIEW.height);
-      return {
-        x: (evt.clientX - rect.left - (rect.width - VIEW.width * scaleToFit) / 2) / scaleToFit,
-        y: (evt.clientY - rect.top - (rect.height - VIEW.height * scaleToFit) / 2) / scaleToFit,
-      };
-    }
-
-    svg.addEventListener(
-      'wheel',
+    globe.addEventListener(
+      'pointerdown',
       function (e) {
-        e.preventDefault();
-        var p = svgPoint(e);
-        zoomAt(e.deltaY < 0 ? 1.18 : 1 / 1.18, p.x, p.y);
+        // La captura es una comodidad, no un requisito: si el navegador la
+        // rechaza (el puntero ya se soltó, un evento sintético), el gesto tiene
+        // que seguir funcionando igual en vez de abortar aquí.
+        try {
+          globe.setPointerCapture(e.pointerId);
+        } catch (ignored) {
+          /* sin captura */
+        }
+        pointers[e.pointerId] = { x: e.clientX, y: e.clientY };
+        spin = null;
+        velocity.x = 0;
+        velocity.y = 0;
+        idleSince = Date.now();
+
+        var list = pointerList();
+        if (list.length === 2) {
+          lastPinch = Math.hypot(list[0].x - list[1].x, list[0].y - list[1].y);
+          drag = null;
+        } else {
+          drag = { x: e.clientX, y: e.clientY, at: performance.now(), moved: 0 };
+        }
       },
-      { passive: false }
+      { passive: true },
     );
 
-    var drag = null;
+    globe.addEventListener(
+      'pointermove',
+      function (e) {
+        if (pointers[e.pointerId] === undefined) return;
+        pointers[e.pointerId] = { x: e.clientX, y: e.clientY };
+        var list = pointerList();
 
-    svg.addEventListener('pointerdown', function (e) {
-      drag = { x: e.clientX, y: e.clientY, cx: cam.x, cy: cam.y, moved: false };
-      svg.setPointerCapture(e.pointerId);
-      svg.classList.add('dragging');
-    });
-
-    svg.addEventListener('pointermove', function (e) {
-      if (drag === null) return;
-      var rect = svg.getBoundingClientRect();
-      var scaleToFit = Math.max(rect.width / VIEW.width, rect.height / VIEW.height);
-      cam.x = drag.cx + (e.clientX - drag.x) / scaleToFit;
-      cam.y = drag.cy + (e.clientY - drag.y) / scaleToFit;
-      if (Math.hypot(e.clientX - drag.x, e.clientY - drag.y) > 3) drag.moved = true;
-      clampCam();
-      applyCam();
-    });
-
-    function endDrag(e) {
-      if (drag !== null) {
-        svg.releasePointerCapture(e.pointerId);
-        svg.classList.remove('dragging');
-      }
-      drag = null;
-    }
-
-    svg.addEventListener('pointerup', endDrag);
-    svg.addEventListener('pointercancel', endDrag);
-
-    document.getElementById('z-in').addEventListener('click', function () {
-      zoomAt(1.45, VIEW.width / 2, VIEW.height / 2);
-    });
-    document.getElementById('z-out').addEventListener('click', function () {
-      zoomAt(1 / 1.45, VIEW.width / 2, VIEW.height / 2);
-    });
-    document.getElementById('z-reset').addEventListener('click', function () {
-      cam = { k: 1, x: 0, y: 0 };
-      applyCam();
-    });
-
-    /* ─── Capas ─────────────────────────────────────────────────────── */
-
-    var routesOn = true;
-    var labelsOn = true;
-    var tracksOn = true;
-
-    function toggle(id, apply) {
-      var btn = document.getElementById(id);
-      btn.addEventListener('click', function () {
-        var next = btn.getAttribute('aria-pressed') !== 'true';
-        btn.setAttribute('aria-pressed', String(next));
-        apply(next);
-      });
-    }
-
-    toggle('l-routes', function (on) {
-      routesOn = on;
-      gRoutes.style.display = on ? '' : 'none';
-    });
-    toggle('l-labels', function (on) {
-      labelsOn = on;
-      applyCam();
-    });
-    toggle('l-tracks', function (on) {
-      tracksOn = on;
-      gTracks.style.display = on ? '' : 'none';
-    });
-
-    /* ─── Selección ─────────────────────────────────────────────────── */
-
-    var initialFlying = airborneFlights(Date.now());
-    var selected = {
-      kind: 'flight',
-      id: initialFlying.length > 0 ? initialFlying[0].id : null,
-    };
-
-    function selectFlight(id) {
-      selected = { kind: 'flight', id: id };
-      renderInspector();
-      renderStrip();
-      render();
-    }
-
-    function selectAirport(iata) {
-      selected = { kind: 'airport', id: iata };
-      renderInspector();
-      renderStrip();
-      render();
-    }
-
-    function selectAirline(name) {
-      selected = { kind: 'airline', id: name };
-      renderCarrier(name);
-      renderBoard();
-      renderInspector();
-    }
-
-    /* ─── Bucle de posiciones ───────────────────────────────────────── */
-
-    function positionOf(f, t) {
-      var here = slerp(f.oLat, f.oLon, f.dLat, f.dLon, t);
-      var pt = project(here.lon, here.lat);
-      return {
-        x: pt.x,
-        y: pt.y,
-        t: t,
-        heading: bearing(here.lat, here.lon, f.dLat, f.dLon),
-        lat: here.lat,
-        lon: here.lon,
-      };
-    }
-
-    function greatCirclePath(f) {
-      var steps = 24;
-      var d = '';
-      for (var i = 0; i <= steps; i++) {
-        var seg = slerp(f.oLat, f.oLon, f.dLat, f.dLon, i / steps);
-        var pt = project(seg.lon, seg.lat);
-        d += (i === 0 ? 'M' : 'L') + pt.x.toFixed(1) + ',' + pt.y.toFixed(1);
-      }
-      return d;
-    }
-
-    function render() {
-      var now = Date.now();
-      var inv = 1 / cam.k;
-      var flying = 0;
-
-      planes.forEach(function (p) {
-        var when = schedule(p.f, now);
-
-        if (!when.airborne) {
-          p.group.style.display = 'none';
-          p.track.style.display = 'none';
-          p.pos = null;
+        if (list.length >= 2) {
+          // Pellizco: además de acercar, mantiene bajo los dedos el trozo de
+          // planeta que estaban tocando. Sin eso el zoom "salta" y es justo lo
+          // que hacía que el mapa pareciera rígido.
+          var dist = Math.hypot(list[0].x - list[1].x, list[0].y - list[1].y);
+          if (lastPinch > 0) {
+            var mx = (list[0].x + list[1].x) / 2;
+            var my = (list[0].y + list[1].y) / 2;
+            zoomAround(dist / lastPinch, mx, my);
+          }
+          lastPinch = dist;
+          followSelection = false;
+          requestPaint(true);
           return;
         }
 
-        flying += 1;
-        var pos = positionOf(p.f, when.t);
-        p.pos = pos;
-        p.group.style.display = '';
-        p.track.style.display = '';
-        p.group.setAttribute(
-          'transform',
-          'translate(' + pos.x.toFixed(2) + ',' + pos.y.toFixed(2) + ') scale(' + inv + ') rotate(' + pos.heading.toFixed(1) + ')'
-        );
-        // La etiqueta no gira con el avión: un texto cabeza abajo no se lee.
-        p.tag.setAttribute('transform', 'rotate(' + (-pos.heading).toFixed(1) + ')');
+        if (!drag) return;
+        var dx = e.clientX - drag.x;
+        var dy = e.clientY - drag.y;
+        var dt = Math.max(1, performance.now() - drag.at);
+        drag.moved += Math.abs(dx) + Math.abs(dy);
+        velocity.x = dx / dt;
+        velocity.y = dy / dt;
+        drag.x = e.clientX;
+        drag.y = e.clientY;
+        drag.at = performance.now();
+        followSelection = false;
+        dragBy(dx, dy);
+        requestPaint(true);
+      },
+      { passive: true },
+    );
 
-        var isOn = selected.kind === 'flight' && selected.id === p.f.id;
-        p.ring.setAttribute('opacity', isOn ? '0.85' : '0');
-        p.tag.style.display = isOn || cam.k >= 2.4 ? '' : 'none';
-        if (p.track.getAttribute('d') === null) p.track.setAttribute('d', greatCirclePath(p.f));
-        p.track.style.opacity = isOn ? '0.95' : '0.34';
-      });
+    function endPointer(e) {
+      var wasDrag = drag;
+      delete pointers[e.pointerId];
+      var list = pointerList();
+      if (list.length < 2) lastPinch = 0;
+      if (list.length === 1) {
+        drag = { x: list[0].x, y: list[0].y, at: performance.now(), moved: 999 };
+        return;
+      }
+      if (list.length > 0) return;
+      drag = null;
 
-      document.getElementById('t-air').textContent = String(flying);
-
-      Object.keys(airportNodes).forEach(function (code) {
-        var node = airportNodes[code];
-        var isOn = selected.kind === 'airport' && selected.id === code;
-        node.dot.setAttribute('fill', isOn ? 'var(--signal)' : '');
-        node.dot.setAttribute('r', String((node.data.size >= 4 ? 2.6 : 1.7) * (isOn ? 2.1 : 1) * inv));
-      });
-    }
-
-    /* ─── Paneles ───────────────────────────────────────────────────── */
-
-    function renderTopbar() {
-      document.getElementById('world-name').textContent =
-        DATA.world.name + ' · ' + DATA.airports.length + ' aeropuertos';
-
-      var day = new Date(DATA.dayStart).toLocaleDateString('es-ES', {
-        day: 'numeric',
-        month: 'short',
-        timeZone: 'UTC',
-      });
-      document.getElementById('replay-note').textContent = 'día simulado ' + day + ' · en bucle';
-      document.getElementById('replay-note').title =
-        'La página reproduce un día completo de la simulación sobre la hora actual. ' +
-        'Las plantillas de las compañías se repiten a diario, así que lo que se ve ' +
-        'a cada hora es lo que de verdad opera a esa hora.';
-      document.getElementById('t-flights').textContent = nf.format(DATA.totals.flights);
-      document.getElementById('t-pax').textContent = compact(DATA.totals.pax);
-      document.getElementById('t-lf').textContent =
-        (DATA.totals.loadFactor * 100).toFixed(1).replace('.', ',') + '%';
-      document.getElementById('t-otp').textContent =
-        DATA.totals.onTimePercent.toFixed(1).replace('.', ',') + '%';
-      document.getElementById('t-fuel').textContent =
-        DATA.world.fuelPriceEurPerKg.toFixed(2).replace('.', ',') + ' €';
-    }
-
-    function initials(name) {
-      return name
-        .split(/\s+/)
-        .filter(Boolean)
-        .slice(0, 2)
-        .map(function (w) { return w[0]; })
-        .join('')
-        .toUpperCase();
-    }
-
-    function renderCarrier(name) {
-      var a = DATA.airlines.filter(function (x) { return x.name === name; })[0] || DATA.airlines[0];
-      if (!a) return;
-      document.getElementById('c-tail').textContent = initials(a.name);
-      document.getElementById('c-name').textContent = a.name;
-      document.getElementById('c-sub').textContent =
-        'HUB ' + a.hub + ' · ' + (a.strategy || 'jugador').replace(/_/g, ' ');
-      document.getElementById('c-fleet').textContent = String(a.aircraft);
-      document.getElementById('c-routes').textContent = String(a.routes);
-      document.getElementById('c-lf').innerHTML =
-        a.loadFactor.toFixed(1).replace('.', ',') + '<small>%</small>';
-      document.getElementById('c-otp').innerHTML =
-        a.onTime.toFixed(1).replace('.', ',') + '<small>%</small>';
-      document.getElementById('c-pax').textContent = compact(a.pax);
-      var result = document.getElementById('c-result');
-      result.textContent = (a.resultEur >= 0 ? '+' : '−') + compact(Math.abs(a.resultEur)) + ' €';
-      result.className = 'v ' + (a.resultEur >= 0 ? 'gain' : 'loss');
-    }
-
-    function renderBoard() {
-      var body = document.getElementById('board');
-      body.textContent = '';
-      DATA.airlines.slice(0, 12).forEach(function (a) {
-        var tr = document.createElement('tr');
-        if (selected.kind === 'airline' && selected.id === a.name) tr.className = 'on';
-        if (currentCarrier === a.name) tr.className = 'on';
-
-        var name = document.createElement('td');
-        name.textContent = a.name;
-        var hub = document.createElement('span');
-        hub.className = 'hub';
-        hub.textContent = a.hub;
-        name.appendChild(hub);
-        name.title = a.name + ' · hub ' + a.hub;
-
-        var lf = document.createElement('td');
-        lf.textContent = a.loadFactor.toFixed(0) + '%';
-
-        var res = document.createElement('td');
-        res.textContent = (a.resultEur >= 0 ? '+' : '−') + compact(Math.abs(a.resultEur));
-        res.className = a.resultEur >= 0 ? 'gain' : 'loss';
-
-        tr.appendChild(name);
-        tr.appendChild(lf);
-        tr.appendChild(res);
-        tr.addEventListener('click', function () {
-          currentCarrier = a.name;
-          renderCarrier(a.name);
-          renderBoard();
-          highlightNetwork(a.name);
-        });
-        body.appendChild(tr);
-      });
-    }
-
-    function renderStrip() {
-      var box = document.getElementById('strip');
-      var now = Date.now();
-      var flying = airborneFlights(now);
-      box.textContent = '';
-
-      if (flying.length === 0) {
-        var empty = document.createElement('div');
-        empty.className = 'strip-row';
-        empty.textContent = 'Sin tráfico en este instante';
-        box.appendChild(empty);
+      if (wasDrag && wasDrag.moved < 8) {
+        var now = performance.now();
+        if (now - lastTap < 300) {
+          zoomAround(1.7, e.clientX, e.clientY);
+          requestPaint(true);
+        }
+        lastTap = now;
         return;
       }
 
-      flying.forEach(function (f) {
-        var row = document.createElement('div');
-        row.className =
-          'strip-row' + (selected.kind === 'flight' && selected.id === f.id ? ' on' : '');
+      // Inercia: al soltar, el planeta sigue girando y se frena solo.
+      var speed = Math.hypot(velocity.x, velocity.y);
+      if (speed > 0.08 && !reducedMotion()) {
+        spin = { x: velocity.x * 16, y: velocity.y * 16 };
+      }
+      idleSince = Date.now();
+    }
 
-        var cs = document.createElement('span');
-        cs.className = 'cs';
-        cs.textContent = f.callsign;
+    globe.addEventListener('pointerup', endPointer, { passive: true });
+    globe.addEventListener('pointercancel', endPointer, { passive: true });
 
-        var leg = document.createElement('span');
-        leg.textContent = f.origin + ' → ' + f.destination;
+    globe.addEventListener(
+      'wheel',
+      function (e) {
+        e.preventDefault();
+        followSelection = false;
+        zoomAround(Math.exp(-e.deltaY * 0.0022), e.clientX, e.clientY);
+        requestPaint(true);
+        idleSince = Date.now();
+      },
+      { passive: false },
+    );
 
-        var pr = document.createElement('span');
-        pr.className = 'pr';
-        pr.textContent = Math.round(schedule(f, now).t * 100) + '%';
+    function zoomAround(factor, px, py) {
+      var anchor = projection.invert ? projection.invert([px, py]) : null;
+      cam.zoom *= factor;
+      applyCam();
+      if (anchor && isFinite(anchor[0]) && isFinite(anchor[1])) pinGeoTo(anchor, px, py);
+    }
 
-        row.appendChild(cs);
-        row.appendChild(leg);
-        row.appendChild(pr);
-        row.addEventListener('click', function () { selectFlight(f.id); });
-        box.appendChild(row);
+    function reducedMotion() {
+      return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    }
+
+    /* -------------------------------------------------------- vuelo a punto */
+
+    var flight = null;
+
+    function flyTo(lon, lat, zoom, ms) {
+      if (reducedMotion()) {
+        cam.lon = lon;
+        cam.lat = lat;
+        cam.zoom = zoom;
+        applyCam();
+        requestPaint(true);
+        return;
+      }
+      var from = [cam.lon, cam.lat, cam.zoom];
+      var interpolate = d3.geoInterpolate([cam.lon, cam.lat], [lon, lat]);
+      flight = {
+        from: from,
+        interpolate: interpolate,
+        zoom: zoom,
+        start: performance.now(),
+        ms: ms,
+      };
+      spin = null;
+    }
+
+    function ease(t) {
+      return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+    }
+
+    /* ------------------------------------------------------------- tamaños */
+
+    function resize() {
+      view.w = window.innerWidth;
+      view.h = window.innerHeight;
+      view.dpr = Math.min(2, window.devicePixelRatio || 1);
+
+      [globe, starsCanvas, world].forEach(function (c) {
+        c.width = Math.round(view.w * view.dpr);
+        c.height = Math.round(view.h * view.dpr);
+        if (c !== world) {
+          c.style.width = view.w + 'px';
+          c.style.height = view.h + 'px';
+        }
+      });
+
+      // El globo ocupa el ancho en móvil y deja sitio a la columna de datos en
+      // pantallas anchas, donde el texto vive a la izquierda.
+      var wide = view.w >= 900;
+      focus.x = wide ? view.w * 0.66 : view.w / 2;
+      focus.y = wide ? view.h * 0.5 : view.h * 0.55;
+      // El planeta se sale por los lados y por abajo, pero el borde de arriba se
+      // ve: es lo que hace que se lea como un planeta y no como un mapa redondo.
+      baseScale = wide
+        ? Math.min(view.w * 0.32, view.h * 0.44)
+        : Math.min(view.w * 0.66, view.h * 0.4);
+
+      applyCam();
+      paintStars();
+      worldKey = '';
+      requestPaint(true);
+    }
+
+    /* ---------------------------------------------------------- chapas DOM */
+
+    var chipLayer = document.getElementById('chips');
+    var chipPool = [];
+
+    function chip(index) {
+      if (chipPool[index] === undefined) {
+        var node = document.createElement('button');
+        node.type = 'button';
+        node.className = 'chip';
+        node.innerHTML =
+          '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5z"/></svg><span></span>';
+        chipLayer.appendChild(node);
+        chipPool[index] = node;
+      }
+      return chipPool[index];
+    }
+
+    function paintChips(selected) {
+      var wanted = [];
+      if (selected) {
+        wanted.push({ code: selected.origin, kind: 'is-origin' });
+        wanted.push({ code: selected.destination, kind: 'is-target' });
+      }
+
+      wanted.forEach(function (item, index) {
+        var node = chip(index);
+        var a = byIata[item.code];
+        if (!a || !visible(a.lon, a.lat)) {
+          node.style.opacity = '0';
+          node.style.pointerEvents = 'none';
+          return;
+        }
+        var p = projection([a.lon, a.lat]);
+        if (!p) {
+          node.style.opacity = '0';
+          return;
+        }
+        node.className = 'chip ' + item.kind;
+        node.style.opacity = '1';
+        node.style.pointerEvents = 'auto';
+        node.style.transform =
+          'translate(-50%,-50%) translate(' +
+          p[0].toFixed(1) +
+          'px,' +
+          (p[1] - 26).toFixed(1) +
+          'px)';
+        node.querySelector('span').textContent = item.code;
+        node.setAttribute('aria-label', a.name);
+      });
+
+      for (var i = wanted.length; i < chipPool.length; i++) {
+        chipPool[i].style.opacity = '0';
+        chipPool[i].style.pointerEvents = 'none';
+      }
+    }
+
+    /* ------------------------------------------------------- texto y listas */
+
+    var elGreeting = document.getElementById('greeting');
+    var elCity = document.getElementById('dest-city');
+    var elSubline = document.getElementById('subline');
+    var elAirborne = document.getElementById('airborne');
+    var elLeft = document.getElementById('scrub-left');
+    var elMid = document.getElementById('scrub-mid');
+    var elRight = document.getElementById('scrub-right');
+    var elTicks = document.getElementById('ticks');
+    var elCursor = document.getElementById('cursor');
+    var elRail = document.getElementById('rail');
+
+    var TICKS = 37;
+    for (var t = 0; t < TICKS; t++) {
+      var mark = document.createElement('i');
+      if (t % 6 === 0) mark.className = 'tall';
+      elTicks.appendChild(mark);
+    }
+    var tickNodes = Array.prototype.slice.call(elTicks.children);
+
+    function greetingFor(now) {
+      var h = new Date(now).getHours();
+      if (h < 6) return 'Buenas noches';
+      if (h < 13) return 'Buenos días';
+      if (h < 21) return 'Buenas tardes';
+      return 'Buenas noches';
+    }
+
+    function tag(text, amber) {
+      var span = document.createElement('span');
+      span.className = amber ? 'tag amber' : 'tag';
+      span.textContent = text;
+      return span;
+    }
+
+    function paintHero(now, selected, state) {
+      elGreeting.textContent = greetingFor(now);
+
+      if (!selected) {
+        elCity.textContent = 'Mundo en calma';
+        elSubline.textContent = '';
+        elSubline.appendChild(tag('Ningún vuelo programado'));
+        return;
+      }
+
+      elCity.textContent = cityOf(selected.destination);
+      elSubline.textContent = '';
+      elSubline.appendChild(tag(selected.callsign, true));
+      elSubline.appendChild(tag(selected.origin + ' → ' + selected.destination));
+      elSubline.appendChild(
+        tag(state.airborne ? selected.airline : 'Sale a las ' + hhmm(state.dep) + ' UTC'),
+      );
+    }
+
+    function paintScrub(now, selected, state) {
+      if (!selected) {
+        elLeft.textContent = '—';
+        elMid.textContent = 'Sin actividad';
+        elRight.textContent = '—';
+        elCursor.style.left = '0%';
+        tickNodes.forEach(function (n) {
+          n.classList.remove('done');
+        });
+        return;
+      }
+
+      elLeft.textContent = hhmm(state.dep) + ' ' + selected.origin;
+      elRight.textContent = selected.destination + ' ' + hhmm(state.arr);
+      elMid.textContent = state.airborne
+        ? duration(state.arr - now) + ' restantes'
+        : 'Despega en ' + duration(state.dep - now);
+
+      var progress = state.airborne ? state.t : 0;
+      elCursor.style.left = (progress * 100).toFixed(2) + '%';
+      tickNodes.forEach(function (n, index) {
+        n.classList.toggle('done', index / (TICKS - 1) <= progress);
       });
     }
 
-    function dl(rows) {
-      var wrap = document.createElement('dl');
-      wrap.className = 'rows';
-      rows.forEach(function (r) {
-        var row = document.createElement('div');
-        row.className = 'row';
-        var dt = document.createElement('dt');
-        dt.textContent = r[0];
-        var dd = document.createElement('dd');
-        dd.textContent = r[1];
-        if (r[2]) dd.className = r[2];
-        row.appendChild(dt);
-        row.appendChild(dd);
-        wrap.appendChild(row);
+    var selectedCard = null;
+
+    /** Deja a la vista la tarjeta del vuelo elegido, venga de donde venga la elección. */
+    function revealSelected() {
+      if (!selectedCard || !selectedCard.scrollIntoView) return;
+      selectedCard.scrollIntoView({
+        behavior: reducedMotion() ? 'auto' : 'smooth',
+        inline: 'center',
+        block: 'nearest',
       });
+    }
+
+    function paintRail(now, items) {
+      elRail.textContent = '';
+      selectedCard = null;
+
+      items.forEach(function (item) {
+        var f = item.flight;
+        var card = document.createElement('button');
+        card.type = 'button';
+        card.className = 'card' + (f.id === selectedId ? ' on' : '');
+        card.setAttribute('role', 'option');
+        card.setAttribute('aria-selected', f.id === selectedId ? 'true' : 'false');
+
+        var top = document.createElement('div');
+        top.className = 'card-top mono';
+        var left = document.createElement('span');
+        left.textContent = f.origin + ' → ' + f.destination;
+        var right = document.createElement('span');
+        right.textContent = item.state.airborne
+          ? duration(item.state.arr - now) + ' rest.'
+          : hhmm(item.state.dep);
+        top.appendChild(left);
+        top.appendChild(right);
+
+        var city = document.createElement('div');
+        city.className = 'card-city';
+        city.textContent = cityOf(f.destination);
+
+        var sub = document.createElement('div');
+        sub.className = 'card-sub';
+        sub.textContent = f.airline + ' · ' + f.aircraft;
+
+        var bar = document.createElement('div');
+        bar.className = 'bar';
+        var fill = document.createElement('span');
+        fill.style.width = Math.round((f.pax / Math.max(1, f.seats)) * 100) + '%';
+        bar.appendChild(fill);
+
+        card.appendChild(top);
+        card.appendChild(city);
+        card.appendChild(sub);
+        card.appendChild(bar);
+        card.addEventListener('click', function () {
+          select(f.id, true);
+        });
+
+        if (f.id === selectedId) selectedCard = card;
+        elRail.appendChild(card);
+      });
+    }
+
+    function select(id, recentre) {
+      selectedId = id;
+      var f = findFlight(id);
+      paintRail(Date.now(), listed);
+      revealSelected();
+      if (f && recentre) {
+        followSelection = true;
+        var mid = slerp(f, 0.5);
+        flyTo(mid[0], mid[1], Math.max(cam.zoom, 2.1), 900);
+      }
+      renderSheet();
+      requestPaint(true);
+    }
+
+    /* ------------------------------------------------- centro de operaciones */
+
+    var sheet = document.getElementById('sheet');
+    var veil = document.getElementById('veil');
+    var sheetBody = document.getElementById('sheet-body');
+    var tabButtons = Array.prototype.slice.call(document.querySelectorAll('.tab'));
+    var activeTab = 'world';
+
+    function node(tag, className, text) {
+      var n = document.createElement(tag);
+      if (className) n.className = className;
+      if (text !== undefined) n.textContent = text;
+      return n;
+    }
+
+    function kpi(label, value, unit) {
+      var box = node('div', 'kpi');
+      box.appendChild(node('dt', null, label));
+      var dd = node('dd', null, value);
+      if (unit) {
+        var small = node('small', null, ' ' + unit);
+        dd.appendChild(small);
+      }
+      box.appendChild(dd);
+      return box;
+    }
+
+    function worldTab() {
+      var frag = document.createDocumentFragment();
+      var grid = node('dl', 'kpis');
+      var t = DATA.totals;
+
+      grid.appendChild(kpi('Vuelos del día', thousands(t.flights)));
+      grid.appendChild(kpi('Aterrizados', thousands(t.landed)));
+      grid.appendChild(kpi('Pasajeros', thousands(t.pax)));
+      grid.appendChild(
+        kpi('Ocupación media', (t.loadFactor * 100).toFixed(1).replace('.', ',') + ' %'),
+      );
+      grid.appendChild(kpi('Puntualidad', t.onTimePercent.toFixed(1).replace('.', ',') + ' %'));
+      grid.appendChild(kpi('Cancelados', thousands(t.cancelled)));
+      grid.appendChild(kpi('Aerolíneas', thousands(DATA.airlines.length)));
+      grid.appendChild(kpi('Aeropuertos', thousands(DATA.airports.length)));
+      grid.appendChild(kpi('Rutas activas', thousands(DATA.routes.length)));
+      grid.appendChild(
+        kpi('Queroseno', DATA.world.fuelPriceEurPerKg.toFixed(2).replace('.', ',') + ' €', '/kg'),
+      );
+      frag.appendChild(grid);
+
+      // Honestidad antes que escaparate: estos números salen de una simulación
+      // real, pero la economía todavía no está calibrada y decirlo forma parte
+      // del producto.
+      var note = node('p', 'note');
+      note.appendChild(node('b', null, 'Economía sin calibrar. '));
+      note.appendChild(
+        document.createTextNode(
+          'Estas cifras salen de la simulación real, no de datos inventados, pero el peso de ' +
+            'mercado de cada aeropuerto todavía se deriva de su tamaño y sus pistas, no del ' +
+            'tráfico de pasajeros publicado. Por eso la ocupación sale alta y casi ninguna ' +
+            'aerolínea pierde dinero, cuando el diseño pide que entre el 10 % y el 20 % pierda. ' +
+            'Es el pendiente C-1 de docs/decisions.md.',
+        ),
+      );
+      frag.appendChild(note);
+      return frag;
+    }
+
+    function airlinesTab() {
+      var wrap = node('div', 'scroller');
+      var table = node('table');
+      var head = node('thead');
+      var hr = node('tr');
+      ['Aerolínea', 'Flota', 'Rutas', 'Ocup.', 'Punt.', 'Resultado'].forEach(function (label) {
+        hr.appendChild(node('th', null, label));
+      });
+      head.appendChild(hr);
+      table.appendChild(head);
+
+      var body = node('tbody');
+      DATA.airlines.slice(0, 40).forEach(function (a) {
+        var tr = node('tr');
+        var who = node('td', 'who', a.name);
+        who.appendChild(node('span', null, a.hub + ' · ' + a.strategy));
+        tr.appendChild(who);
+        tr.appendChild(node('td', 'mono', String(a.aircraft)));
+        tr.appendChild(node('td', 'mono', String(a.routes)));
+        tr.appendChild(node('td', 'mono', a.loadFactor.toFixed(0) + ' %'));
+        tr.appendChild(node('td', 'mono', a.onTime.toFixed(0) + ' %'));
+        tr.appendChild(
+          node('td', 'mono ' + (a.resultEur >= 0 ? 'pos' : 'neg'), euros(a.resultEur)),
+        );
+        body.appendChild(tr);
+      });
+      table.appendChild(body);
+      wrap.appendChild(table);
       return wrap;
     }
 
-    function section(title) {
-      var s = document.createElement('div');
-      s.className = 'section';
-      var h = document.createElement('h2');
-      h.textContent = title;
-      s.appendChild(h);
-      return s;
+    function row(label, value) {
+      var div = node('div');
+      div.appendChild(node('dt', null, label));
+      div.appendChild(node('dd', 'mono', value));
+      return div;
     }
 
-    function renderInspector() {
-      var host = document.getElementById('inspector');
-      host.textContent = '';
+    function flightTab() {
+      var f = findFlight(selectedId);
+      if (!f) return node('p', 'note', 'No hay ningún vuelo seleccionado.');
 
-      if (selected.kind === 'airport') return renderAirportPanel(host);
-      if (selected.kind === 'flight' && selected.id) return renderFlightPanel(host);
-      renderHelpPanel(host);
+      var state = schedule(f, Date.now());
+      var list = node('dl', 'ledger');
+      list.appendChild(row('Vuelo', f.callsign));
+      list.appendChild(row('Operador', f.airline));
+      list.appendChild(row('Equipo', f.aircraft));
+      list.appendChild(row('Origen', byIata[f.origin] ? byIata[f.origin].name : f.origin));
+      list.appendChild(
+        row('Destino', byIata[f.destination] ? byIata[f.destination].name : f.destination),
+      );
+      list.appendChild(row('Distancia', thousands(f.distanceKm) + ' km'));
+      list.appendChild(row('Salida', hhmm(state.dep) + ' UTC'));
+      list.appendChild(row('Llegada', hhmm(state.arr) + ' UTC'));
+      list.appendChild(row('Tiempo de vuelo', duration(state.span)));
+      list.appendChild(row('Pasaje', thousands(f.pax) + ' / ' + thousands(f.seats)));
+      list.appendChild(row('Ocupación', Math.round((f.pax / Math.max(1, f.seats)) * 100) + ' %'));
+
+      var frag = document.createDocumentFragment();
+      frag.appendChild(list);
+
+      var carrier = airlineByName[f.airline];
+      if (carrier) {
+        var more = node('dl', 'ledger');
+        more.style.marginTop = '12px';
+        more.appendChild(row('Base', carrier.hub));
+        more.appendChild(row('Estrategia', carrier.strategy));
+        more.appendChild(row('Flota', String(carrier.aircraft) + ' aviones'));
+        more.appendChild(row('Rutas activas', String(carrier.routes)));
+        more.appendChild(row('Caja', euros(carrier.cashEur)));
+        more.appendChild(row('Resultado del día', euros(carrier.resultEur)));
+        frag.appendChild(more);
+      }
+
+      return frag;
     }
 
-    function renderFlightPanel(host) {
-      var f = DATA.flights.filter(function (x) { return x.id === selected.id; })[0];
-      if (!f) return renderHelpPanel(host);
+    function renderSheet() {
+      if (!sheet.classList.contains('open')) return;
+      sheetBody.textContent = '';
+      sheetBody.appendChild(
+        activeTab === 'world' ? worldTab() : activeTab === 'airlines' ? airlinesTab() : flightTab(),
+      );
+    }
 
+    function openSheet(open) {
+      sheet.classList.toggle('open', open);
+      veil.classList.toggle('on', open);
+      sheet.setAttribute('aria-hidden', open ? 'false' : 'true');
+      if (open) renderSheet();
+    }
+
+    tabButtons.forEach(function (button) {
+      button.addEventListener('click', function () {
+        activeTab = button.getAttribute('data-tab');
+        tabButtons.forEach(function (other) {
+          other.setAttribute('aria-selected', other === button ? 'true' : 'false');
+        });
+        renderSheet();
+        sheetBody.scrollTop = 0;
+      });
+    });
+
+    document.getElementById('cta').addEventListener('click', function () {
+      openSheet(true);
+    });
+    document.getElementById('open-ops').addEventListener('click', function () {
+      openSheet(true);
+    });
+    document.getElementById('close-ops').addEventListener('click', function () {
+      openSheet(false);
+    });
+    veil.addEventListener('click', function () {
+      openSheet(false);
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') openSheet(false);
+    });
+
+    // Arrastrar el asa hacia abajo cierra el panel, como en cualquier hoja de móvil.
+    var grip = document.getElementById('grip');
+    var gripStart = null;
+    grip.addEventListener('pointerdown', function (e) {
+      gripStart = e.clientY;
+      try {
+        grip.setPointerCapture(e.pointerId);
+      } catch (ignored) {
+        /* sin captura */
+      }
+    });
+    grip.addEventListener('pointermove', function (e) {
+      if (gripStart === null) return;
+      var dy = Math.max(0, e.clientY - gripStart);
+      sheet.style.transform = 'translateY(' + dy + 'px)';
+    });
+    function gripEnd(e) {
+      if (gripStart === null) return;
+      var dy = Math.max(0, e.clientY - gripStart);
+      gripStart = null;
+      sheet.style.transform = '';
+      if (dy > 90) openSheet(false);
+    }
+    grip.addEventListener('pointerup', gripEnd);
+    grip.addEventListener('pointercancel', gripEnd);
+
+    document.getElementById('recenter').addEventListener('click', function () {
+      var f = findFlight(selectedId);
+      if (!f) {
+        flyTo(6, 46, 1, 800);
+        return;
+      }
+      followSelection = true;
+      var mid = slerp(f, 0.5);
+      flyTo(mid[0], mid[1], 2.4, 800);
+    });
+
+    document.getElementById('shuffle').addEventListener('click', function () {
+      if (listed.length === 0) return;
+      var index = 0;
+      for (var i = 0; i < listed.length; i++) {
+        if (listed[i].flight.id === selectedId) index = i;
+      }
+      select(listed[(index + 1) % listed.length].flight.id, true);
+    });
+
+    /* --------------------------------------------------------------- bucle */
+
+    var needsPaint = true;
+    var lastChrome = 0;
+
+    function requestPaint(force) {
+      needsPaint = true;
+      if (force) worldKey = worldKey === '' ? '' : worldKey;
+    }
+
+    function tick() {
       var now = Date.now();
-      var when = schedule(f, now);
-      var t = when.t;
-      var p = planeById[f.id];
-      var remaining = Math.max(0, Math.round((when.arr - now) / 60000));
+      var frameStart = performance.now();
 
-      var s = section('Vuelo seleccionado');
+      // Animación de acercamiento a un vuelo.
+      if (flight) {
+        var progress = Math.min(1, (frameStart - flight.start) / flight.ms);
+        var point = flight.interpolate(ease(progress));
+        cam.lon = point[0];
+        cam.lat = point[1];
+        cam.zoom = flight.from[2] + (flight.zoom - flight.from[2]) * ease(progress);
+        applyCam();
+        if (progress >= 1) flight = null;
+        needsPaint = true;
+      } else if (spin) {
+        dragBy(spin.x, spin.y);
+        spin.x *= 0.93;
+        spin.y *= 0.93;
+        if (Math.abs(spin.x) < 0.05 && Math.abs(spin.y) < 0.05) spin = null;
+        needsPaint = true;
+      }
 
-      var head = document.createElement('div');
-      head.style.display = 'flex';
-      head.style.justifyContent = 'space-between';
-      head.style.alignItems = 'center';
-      head.style.marginBottom = '10px';
+      var flying = flightsNow(now);
+      elAirborne.textContent = String(flying.length);
 
-      var cs = document.createElement('div');
-      cs.style.fontFamily = 'var(--mono)';
-      cs.style.fontSize = '20px';
-      cs.style.fontWeight = '600';
-      cs.style.letterSpacing = '0.03em';
-      cs.textContent = f.callsign;
+      var nextList = railItems(flying, now);
+      var selected = findFlight(selectedId);
+      var stillListed = nextList.some(function (item) {
+        return item.flight.id === selectedId;
+      });
 
-      var pill = document.createElement('span');
-      pill.className = 'pill';
-      pill.textContent = t >= 1 ? 'Aterrizado' : 'En vuelo';
+      // Cuando el vuelo elegido aterriza, el globo no se queda huérfano: pasa al
+      // siguiente sin que nadie tenga que tocar nada.
+      if (!selected || !stillListed) {
+        var pick = pickDefault(nextList);
+        if (pick) {
+          selectedId = pick;
+          selected = findFlight(pick);
+          if (followSelection && selected) {
+            var mid = slerp(selected, 0.5);
+            flyTo(mid[0], mid[1], Math.max(cam.zoom, 2.1), 900);
+          }
+          renderSheet();
+        }
+      }
 
-      head.appendChild(cs);
-      head.appendChild(pill);
-      s.appendChild(head);
+      var listChanged = nextList.length !== listed.length;
+      if (!listChanged) {
+        for (var i = 0; i < nextList.length; i++) {
+          if (nextList[i].flight.id !== listed[i].flight.id) {
+            listChanged = true;
+            break;
+          }
+        }
+      }
+      listed = nextList;
 
-      var leg = document.createElement('div');
-      leg.className = 'leg';
+      if (listChanged || now - lastChrome > 20000) {
+        paintRail(now, listed);
+        lastChrome = now;
+      }
 
-      var from = document.createElement('div');
-      var fromCode = document.createElement('div');
-      fromCode.className = 'code';
-      fromCode.textContent = f.origin;
-      var fromCity = document.createElement('div');
-      fromCity.className = 'city';
-      fromCity.textContent = hhmm(when.dep);
-      from.appendChild(fromCode);
-      from.appendChild(fromCity);
+      var state = selected ? schedule(selected, now) : null;
+      paintHero(now, selected, state);
+      paintScrub(now, selected, state);
 
-      var wire = document.createElement('div');
-      wire.className = 'wire';
-      var marker = document.createElement('i');
-      marker.style.left = (t * 100).toFixed(1) + '%';
-      wire.appendChild(marker);
+      var key = [
+        Math.round(cam.lon * 20),
+        Math.round(cam.lat * 20),
+        Math.round(cam.zoom * 60),
+        view.w,
+        view.h,
+      ].join('|');
 
-      var to = document.createElement('div');
-      to.style.textAlign = 'right';
-      var toCode = document.createElement('div');
-      toCode.className = 'code';
-      toCode.textContent = f.destination;
-      var toCity = document.createElement('div');
-      toCity.className = 'city';
-      toCity.textContent = hhmm(when.arr);
-      to.appendChild(toCode);
-      to.appendChild(toCity);
+      if (key !== worldKey) {
+        worldKey = key;
+        paintWorld();
+        needsPaint = true;
+      }
 
-      leg.appendChild(from);
-      leg.appendChild(wire);
-      leg.appendChild(to);
-      s.appendChild(leg);
+      paintLive(now, flying, selected);
+      paintChips(selected);
+      needsPaint = false;
 
-      s.appendChild(
-        dl([
-          ['Compañía', f.airline],
-          ['Aeronave', f.aircraft],
-          ['Pasajeros', nf.format(f.pax) + ' / ' + nf.format(f.seats)],
-          ['Ocupación', Math.round((f.pax / f.seats) * 100) + ' %'],
-          ['Distancia', nf.format(f.distanceKm) + ' km'],
-          ['Altitud', nf.format(Math.round(altitudeAt(t, f.distanceKm))) + ' m'],
-          ['Rumbo', Math.round(p && p.pos ? p.pos.heading : 0) + '°'],
-          ['Restante', t >= 1 ? '—' : remaining + ' min'],
-        ])
-      );
-
-      var meter = document.createElement('div');
-      meter.className = 'meter';
-      var bar = document.createElement('i');
-      bar.style.width = (t * 100).toFixed(1) + '%';
-      meter.appendChild(bar);
-      s.appendChild(meter);
-
-      host.appendChild(s);
-
-      var note = section('Cómo se calcula');
-      var text = document.createElement('p');
-      text.className = 'note';
-      text.innerHTML =
-        'El servidor <b>no guarda la posición</b> de este avión. Guarda su plan ' +
-        '—origen, destino, hora de salida y hora de llegada— y esta página ' +
-        'interpola sobre el arco de círculo máximo contra el reloj. Por eso el ' +
-        'símbolo se mueve sin pedir nada, y todos los jugadores lo ven en el ' +
-        'mismo sitio.<br><br>Esta vista previa reproduce un <b>día grabado</b> de ' +
-        'la simulación sobre la hora actual; no está conectada a la API en vivo.';
-      note.appendChild(text);
-      host.appendChild(note);
+      requestAnimationFrame(tick);
     }
 
-    function altitudeAt(t, distanceKm) {
-      var cruise = distanceKm < 500 ? 7500 : distanceKm < 1500 ? 10000 : 11600;
-      if (t <= 0.08) return cruise * (t / 0.08);
-      if (t >= 0.88) return cruise * ((1 - t) / 0.12);
-      return cruise;
+    /**
+     * Lo que entra en el carrusel.
+     *
+     * A media mañana hay más de cien aviones en el aire a la vez y rehacer cien
+     * tarjetas cada vez que uno despega es trabajo tirado: el dedo no llega ni
+     * a la décima. Se enseña una ventana, con el vuelo elegido dentro aunque
+     * haya quedado fuera del corte.
+     */
+    function railItems(flying, now) {
+      var source = flying.length > 0 ? flying : upcoming(now);
+      var shown = source.slice(0, RAIL_SIZE);
+      var present = shown.some(function (item) {
+        return item.flight.id === selectedId;
+      });
+      if (present || selectedId === null) return shown;
+
+      for (var i = RAIL_SIZE; i < source.length; i++) {
+        if (source[i].flight.id === selectedId) return [source[i]].concat(shown);
+      }
+      return shown;
     }
 
-    function renderAirportPanel(host) {
-      var a = DATA.airports.filter(function (x) { return x.iata === selected.id; })[0];
-      if (!a) return renderHelpPanel(host);
-
-      var flying = airborneFlights(Date.now());
-      var inbound = flying.filter(function (f) { return f.destination === a.iata; });
-      var outbound = flying.filter(function (f) { return f.origin === a.iata; });
-
-      var s = section('Aeropuerto');
-
-      var head = document.createElement('div');
-      head.style.display = 'flex';
-      head.style.alignItems = 'baseline';
-      head.style.gap = '10px';
-      head.style.marginBottom = '10px';
-
-      var code = document.createElement('div');
-      code.className = 'code';
-      code.style.fontFamily = 'var(--mono)';
-      code.style.fontSize = '26px';
-      code.style.fontWeight = '600';
-      code.textContent = a.iata;
-
-      var city = document.createElement('div');
-      city.className = 'city';
-      city.textContent = a.city + ' · ' + a.country;
-
-      head.appendChild(code);
-      head.appendChild(city);
-      s.appendChild(head);
-
-      var full = document.createElement('div');
-      full.className = 'note';
-      full.style.marginBottom = '12px';
-      full.textContent = a.name;
-      s.appendChild(full);
-
-      s.appendChild(
-        dl([
-          ['Clase', 'Nivel ' + a.size + ' de 5'],
-          ['Peso de mercado', nf.format(Math.round(a.weight))],
-          ['Rutas de salida', String(a.departures)],
-          ['En aproximación', String(inbound.length)],
-          ['Despegados', String(outbound.length)],
-        ])
-      );
-
-      var meter = document.createElement('div');
-      meter.className = 'meter calm';
-      var bar = document.createElement('i');
-      bar.style.width = (a.size / 5) * 100 + '%';
-      meter.appendChild(bar);
-      s.appendChild(meter);
-
-      host.appendChild(s);
-
-      var note = section('Sobre el peso de mercado');
-      var text = document.createElement('p');
-      text.className = 'note';
-      text.innerHTML =
-        'El peso de mercado alimenta el modelo de gravedad que genera la demanda. ' +
-        'Hoy se deriva de datos observables del aeropuerto —categoría, pistas y ' +
-        'longitud— y es <b>provisional</b>: sustituirlo por tráfico real de ' +
-        'pasajeros es la primera tarea de calibración pendiente.';
-      note.appendChild(text);
-      host.appendChild(note);
+    /** El vuelo más largo en el aire: el arco más vistoso y el que mejor lee. */
+    function pickDefault(items) {
+      var best = null;
+      items.forEach(function (item) {
+        if (!best || item.flight.distanceKm > best.flight.distanceKm) best = item;
+      });
+      return best ? best.flight.id : null;
     }
 
-    function renderHelpPanel(host) {
-      var s = section('Sin selección');
-      var text = document.createElement('p');
-      text.className = 'note';
-      text.textContent =
-        'Toca un avión para ver su vuelo, o un aeropuerto para ver su mercado. ' +
-        'Rueda del ratón o pellizco para acercar.';
-      s.appendChild(text);
-      host.appendChild(s);
-    }
+    /* --------------------------------------------------------------- arranque */
 
-    /* ─── Arranque ──────────────────────────────────────────────────── */
+    window.addEventListener('resize', resize);
+    if (window.visualViewport) window.visualViewport.addEventListener('resize', resize);
 
-    var currentCarrier = DATA.airlines.length > 0 ? DATA.airlines[0].name : '';
+    resize();
 
-    svg.addEventListener('click', function () {
-      if (drag !== null && drag.moved) return;
-    });
+    var initial = railItems(flightsNow(Date.now()), Date.now());
+    listed = initial;
+    selectedId = pickDefault(initial);
+    paintRail(Date.now(), listed);
+    revealSelected();
 
-    function tickClock() {
-      var d = new Date();
-      document.getElementById('clock').textContent =
-        String(d.getUTCHours()).padStart(2, '0') +
-        ':' +
-        String(d.getUTCMinutes()).padStart(2, '0') +
-        ':' +
-        String(d.getUTCSeconds()).padStart(2, '0');
-    }
-
-    renderTopbar();
-    renderCarrier(currentCarrier);
-    highlightNetwork(currentCarrier);
-    renderBoard();
-    renderStrip();
-    renderInspector();
-    applyCam();
-    tickClock();
-
-    window.addEventListener('resize', function () {
-      clampCam();
+    var start = findFlight(selectedId);
+    if (start) {
+      var midpoint = slerp(start, 0.5);
+      cam.lon = midpoint[0];
+      cam.lat = midpoint[1];
+      cam.zoom = 1.15;
       applyCam();
-    });
+    }
 
-    setInterval(tickClock, 1000);
-
-    // Los aviones se mueven de verdad: la posición se recalcula contra el
-    // reloj, no se anima por animar.
-    setInterval(function () {
-      render();
-      renderStrip();
-      if (selected.kind === 'flight') renderInspector();
-    }, 1000);
+    requestAnimationFrame(tick);
   })();
 </script>
