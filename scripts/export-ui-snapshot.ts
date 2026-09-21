@@ -10,7 +10,6 @@ import {
 import { greatCircleDistanceKm } from '@airline/domain';
 import { addDays, instant, startOfUtcDay, toEuros, toISO, type Instant } from '@airline/shared';
 import { toDbTimestamp } from '@airline/db';
-import { projectPoint, type Projection } from './lib/projection.js';
 
 /**
  * Exporta una instantánea del mundo para la interfaz.
@@ -23,11 +22,15 @@ import { projectPoint, type Projection } from './lib/projection.js';
 const ROOT = path.resolve(import.meta.dirname, '..');
 const OUT_FILE = path.join(ROOT, 'data', 'ui-snapshot.json');
 
+/** La geometría que escribe scripts/build-map-geometry.ts, en grados. */
 interface MapFile {
-  readonly view: { width: number; height: number };
-  readonly projection: Projection;
-  readonly land: string;
-  readonly borders: string;
+  readonly land: { readonly type: 'MultiPolygon'; readonly coordinates: number[][][][] };
+  readonly borders: { readonly type: 'MultiLineString'; readonly coordinates: number[][][] };
+}
+
+/** Coordenada a cuatro decimales: unos 11 m, de sobra para situar un aeropuerto. */
+function deg(value: unknown): number {
+  return Math.round(Number(value) * 1e4) / 1e4;
 }
 
 async function main(): Promise<void> {
@@ -35,11 +38,8 @@ async function main(): Promise<void> {
 
   try {
     const map = JSON.parse(
-      await readFile(path.join(ROOT, 'data', 'map-europe.json'), 'utf8'),
+      await readFile(path.join(ROOT, 'data', 'world-map.json'), 'utf8'),
     ) as MapFile;
-    // Exactamente la misma proyección con la que se dibujó el mapa.
-    const project = (lon: number, lat: number): { x: number; y: number } =>
-      projectPoint(map.projection, lon, lat);
 
     const [world] = await worldsRepo.listOpenWorlds(pool);
     if (world === undefined)
@@ -104,10 +104,6 @@ async function main(): Promise<void> {
 
     const snapshot = {
       generatedAt: toISO(now),
-      // Los parámetros de la proyección viajan con los datos para que el
-      // cliente proyecte por su cuenta cualquier punto —un avión en
-      // movimiento— sin volver a preguntar al servidor.
-      projection: map.projection,
       world: {
         id: world.id,
         name: world.name,
@@ -115,32 +111,28 @@ async function main(): Promise<void> {
         fuelPriceEurPerKg: world.fuelPriceCentsPerKg / 100,
       },
       totals,
-      map: { view: map.view, land: map.land, borders: map.borders },
-      airports: airportRows.rows.map((r) => {
-        const point = project(Number(r['lon']), Number(r['lat']));
-        return {
-          iata: r['iata'] as string,
-          name: r['name'] as string,
-          city: r['city'] as string,
-          country: r['country'] as string,
-          size: Number(r['size_class']),
-          weight: Number(r['market_weight']),
-          departures: Number(r['departures']),
-          x: Math.round(point.x * 10) / 10,
-          y: Math.round(point.y * 10) / 10,
-        };
-      }),
-      routes: routeRows.rows.map((r) => {
-        const from = project(Number(r['o_lon']), Number(r['o_lat']));
-        const to = project(Number(r['d_lon']), Number(r['d_lat']));
-        return {
-          airline: r['airline'] as string,
-          x1: Math.round(from.x * 10) / 10,
-          y1: Math.round(from.y * 10) / 10,
-          x2: Math.round(to.x * 10) / 10,
-          y2: Math.round(to.y * 10) / 10,
-        };
-      }),
+      // La geometría viaja en grados y proyecta el cliente: el globo cambia de
+      // proyección en cada fotograma mientras se gira, así que aquí no se puede
+      // decidir dónde cae un punto en pantalla.
+      map: { land: map.land, borders: map.borders },
+      airports: airportRows.rows.map((r) => ({
+        iata: r['iata'] as string,
+        name: r['name'] as string,
+        city: r['city'] as string,
+        country: r['country'] as string,
+        size: Number(r['size_class']),
+        weight: Number(r['market_weight']),
+        departures: Number(r['departures']),
+        lat: deg(r['lat']),
+        lon: deg(r['lon']),
+      })),
+      routes: routeRows.rows.map((r) => ({
+        airline: r['airline'] as string,
+        oLat: deg(r['o_lat']),
+        oLon: deg(r['o_lon']),
+        dLat: deg(r['d_lat']),
+        dLon: deg(r['d_lon']),
+      })),
       // Minuto del día en que sale y en que llega, en vez de instantes
       // absolutos: es lo que permite al cliente situar el día sobre la fecha
       // de hoy sin arrastrar la fecha en la que se simuló.
@@ -170,10 +162,10 @@ async function main(): Promise<void> {
           depMs: departure - dayStart,
           arrMs: arrival - dayStart,
           distanceKm: Math.round(greatCircleDistanceKm(origin, destination)),
-          oLat: Math.round(origin.latitude * 1e4) / 1e4,
-          oLon: Math.round(origin.longitude * 1e4) / 1e4,
-          dLat: Math.round(destination.latitude * 1e4) / 1e4,
-          dLon: Math.round(destination.longitude * 1e4) / 1e4,
+          oLat: deg(origin.latitude),
+          oLon: deg(origin.longitude),
+          dLat: deg(destination.latitude),
+          dLon: deg(destination.longitude),
           pax: paxTotal,
           seats: seatsTotal,
         };

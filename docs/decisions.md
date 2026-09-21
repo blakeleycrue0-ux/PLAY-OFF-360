@@ -275,6 +275,63 @@ que cambia es quién la llama y con qué instantánea.
 
 ---
 
+### ADR-015 · La geometría del mundo viaja sin proyectar · vigente
+
+Sustituye a la decisión anterior, que guardaba el mapa como rutas SVG ya
+proyectadas en una Mercator ajustada a Europa (`data/map-europe.json`).
+
+Aquello servía para un mapa plano y fijo, y sólo para ése. Un globo que se gira
+cambia de proyección en cada fotograma: no hay ningún punto proyectado que se
+pueda precalcular. Así que `data/world-map.json` guarda tierra y fronteras como
+GeoJSON en grados, y `data/ui-snapshot.json` guarda latitud y longitud de
+aeropuertos, rutas y vuelos. Quien proyecta es el cliente.
+
+Consecuencias:
+
+- `scripts/lib/projection.ts` desaparece. Ya no hay ninguna proyección en el
+  lado del servidor que pueda desincronizarse con la del cliente, que era el
+  fallo que dejaba los aeropuertos fuera de sus países.
+- El fichero crece de 20 KB a 113 KB porque ahora es el mundo entero y no sólo
+  el encuadre europeo. Comprimido son unos 40 KB, que es lo que de verdad viaja.
+- La proyección concreta deja de ser una decisión de datos y pasa a ser una
+  decisión de interfaz. Cambiar de globo a mapa plano ya no obliga a
+  regenerar nada.
+
+### ADR-016 · d3-geo va empotrado, no en un CDN · vigente
+
+La proyección ortográfica del globo necesita recortar por el horizonte: un
+polígono que cruza el borde visible hay que cerrarlo siguiendo el arco del
+horizonte, y hacerlo mal deja tajos rectos cruzando el planeta. Es la parte que
+no conviene escribir a mano, así que se usa `d3-geo`.
+
+Se copia dentro del repositorio (`apps/web/preview/vendor/`) y se incrusta en el
+HTML publicado, en vez de pedirlo a un CDN. Un CDN es una dependencia de red más
+que puede fallar justo cuando alguien abre la aplicación, y este despliegue ya ha
+fallado bastantes veces por depender de cosas que no estaban. `d3-geo` usa tres
+símbolos de `d3-array` (`Adder`, `merge`, `range`); se copian esos tres, no el
+paquete entero.
+
+La contrapartida es que actualizarlo es manual. Está documentado en
+`apps/web/preview/vendor/README.md`.
+
+### ADR-017 · Las rotaciones se construyen en hora local de la base · vigente
+
+El horario de cada avión se calcula en hora local de su base y se pasa a UTC al
+publicarlo, que es como lo hace una aerolínea de verdad.
+
+Cuando se medía directamente en UTC, las sesenta compañías del mundo abrían el
+día a la misma hora absoluta: nadie despegaba antes de las 06:00 UTC ni
+aterrizaba después de las 21:09 UTC, y la operación del mundo cabía en una
+franja artificialmente estrecha. Con la ventana local (06:00–22:00) y los husos
+del conjunto de datos (de UTC−1 a UTC+3), el día pasa a ir de las 03:00 a las
+20:15 UTC.
+
+No es sólo presentación: la demanda depende de la hora local de salida
+(`docs/04`), así que un horario construido en UTC estaba evaluando la
+conveniencia del vuelo contra una hora que no es la que ve el pasajero.
+
+---
+
 ## Pendientes de calibración
 
 No son decisiones de arquitectura: son **números que todavía no están
